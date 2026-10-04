@@ -57,6 +57,7 @@ npm ci
 npm run typecheck && npm test        # unit tests; the ssh tests start a real sshd of this account on 127.0.0.1
 npm run build                        # dist/beethoven/: the extension folder and the plugin folder in one
 npm run pack                         # also dist/beethoven-<version>.mcpb, validated by @anthropic-ai/mcpb
+npm run gate                         # all of the above; git runs it before every push (.githooks/pre-push)
 claude --plugin-dir dist/beethoven   # try it as a Claude Code plugin
 ```
 

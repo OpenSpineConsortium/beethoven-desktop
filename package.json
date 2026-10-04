@@ -16,7 +16,10 @@
     "test": "vitest run",
     "build": "node scripts/build.mjs",
     "forbidden": "node scripts/forbidden.mjs",
-    "pack": "node scripts/build.mjs --pack"
+    "pack": "node scripts/build.mjs --pack",
+    "gate": "npm run typecheck && npm run forbidden && npm test && npm run pack",
+    "hooks": "node scripts/hooks.mjs",
+    "prepare": "node scripts/hooks.mjs"
   },
   "devDependencies": {
     "@anthropic-ai/mcpb": "2.1.2",

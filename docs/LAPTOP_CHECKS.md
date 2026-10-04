@@ -6,6 +6,10 @@ done. Each one says what to do, what to look for, and has a line for the outcome
 and into the spike's section 6 table (`docs/DESIGN.md` section 6). Use the `.mcpb` from the CI run's
 artifact (`beethoven-desktop`) or `npm run pack`.
 
+These checks never hold a merge: the tests decide what lands on `main` (`CLAUDE.md`), and these are
+the maintainer's verification of what landed, on a real machine, afterwards. A check that fails
+becomes an issue and a fix like any other.
+
 Settings for all of them: grid account `go2432`, site `wayne`, worker name `worker`.
 
 1. **Install the bundle on Windows 11.** Double-click `beethoven-1.0.0.mcpb` (or Settings, Extensions,

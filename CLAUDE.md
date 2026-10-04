@@ -79,6 +79,17 @@ ssh tests fail instead of skipping), the unit tests on macOS and Windows, the bu
 validated and uploaded as an artifact. The real-gate test needs the private server repository, so it
 runs on a maintainer's machine or in a session that has both checkouts.
 
+**The tests decide what lands, with no human step** (greg, 2026-10-04). `.githooks/pre-push` runs
+`npm run gate` (typecheck, forbidden, tests, the packed and validated bundle) and a red gate does not
+leave the machine; `npm ci` points git at it (`npm run hooks`). `SKIP_GATE=1` skips it knowingly, and
+the commit says why. Work goes to `main` through pull requests, opened ready for review and never as
+drafts; `.github/workflows/automerge.yml` arms GitHub's auto-merge on each one, and it merges when
+the checks `.github/rulesets/main.json` requires are green (deletion and force-push blocked;
+organization admins bypass). That rule is applied to GitHub by `.github/workflows/rulesets.yml`
+with the maintainer's `RULESETS_TOKEN` secret; until it is applied, auto-merge stays off, because
+armed without a required check it would merge before the tests. The laptop checks never hold a
+merge: they cannot run in CI, and they are the maintainer's verification after it.
+
 ## How to be useful here
 
 A wrong state that reads as plausible is the failure to fear. Check against something outside the
