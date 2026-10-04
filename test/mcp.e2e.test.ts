@@ -13,7 +13,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { labMissing, startLab, type Lab } from './lab.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const TOOL_NAMES = ['grid_sign_in', 'grid_sign_out', 'grid_check', 'worker_status', 'worker_list', 'worker_start', 'worker_stop', 'worker_log', 'workspace_list', 'workspace_read', 'open_in_claude'];
+const TOOL_NAMES = ['grid_sign_in', 'grid_sign_out', 'grid_check', 'worker_status', 'worker_list', 'worker_start', 'worker_stop', 'worker_log', 'workspace_list', 'workspace_read', 'account_list', 'open_in_claude'];
 
 let built = '';
 function build(): string {
@@ -45,7 +45,7 @@ afterAll(() => {
 });
 
 describe('the built server, through the MCP SDK client', () => {
-  it('lists the eleven tools with honest hints, and asks for the account before anything else', async () => {
+  it('lists the twelve tools with honest hints, and asks for the account before anything else', async () => {
     const { client, stderr } = await connect({ PATH: process.env.PATH ?? '', HOME: mkdtempSync(join(tmpdir(), 'bd-home-')), BEETHOVEN_DESKTOP_ACCOUNT: '${user_config.grid_account}' });
     try {
       expect(client.getServerVersion()).toMatchObject({ name: 'beethoven-desktop', version: '1.0.0' });
@@ -54,7 +54,8 @@ describe('the built server, through the MCP SDK client', () => {
       expect(tools.map((t) => t.name).sort()).toEqual([...TOOL_NAMES].sort());
       const by = Object.fromEntries(tools.map((t) => [t.name, t]));
       expect(by['worker_stop']!.annotations).toMatchObject({ destructiveHint: true });
-      for (const n of ['grid_check', 'worker_status', 'worker_list', 'worker_log', 'workspace_list', 'workspace_read']) expect(by[n]!.annotations?.readOnlyHint, n).toBe(true);
+      expect(by['account_list']!.annotations).toMatchObject({ readOnlyHint: true, openWorldHint: false });
+      for (const n of ['grid_check', 'worker_status', 'worker_list', 'worker_log', 'workspace_list', 'workspace_read', 'account_list']) expect(by[n]!.annotations?.readOnlyHint, n).toBe(true);
       // no tool takes anything that could be a secret
       for (const t of tools) for (const k of Object.keys((t.inputSchema.properties ?? {}) as object)) expect(k).toMatch(/^(?:name|path|max_bytes|lines|permission_mode|keep_running)$/);
       const r = await client.callTool({ name: 'grid_check', arguments: {} });
@@ -65,6 +66,26 @@ describe('the built server, through the MCP SDK client', () => {
       expect(stderr()).toBe('beethoven-desktop 1.0.0 started\n');
     } finally {
       await client.close();
+    }
+  }, 60_000);
+
+  it('account_list reads the list bee keeps in the home folder, and sends nothing to the grid', async () => {
+    const home = mkdtempSync(join(tmpdir(), 'bd-home-'));
+    mkdirSync(join(home, '.beethoven', 'engine'), { recursive: true });
+    writeFileSync(join(home, '.beethoven', 'engine', 'accounts.json'), JSON.stringify({ version: 1, accounts: [{ label: 'main', path: null, enabled: true, order: 0, hibernate_until: null }, { label: 'work', path: join(home, 'w'), enabled: false, order: 1 }] }));
+    // no ssh on PATH: a request to the grid would fail, and this one makes none. Windows finds the home in USERPROFILE.
+    const { client } = await connect({ PATH: '', HOME: home, USERPROFILE: home, BEETHOVEN_DESKTOP_ACCOUNT: 'ab1234' });
+    try {
+      const r = await client.callTool({ name: 'account_list', arguments: {} });
+      expect(r.isError).toBeFalsy();
+      expect(textOf(r)).toContain('2 Claude accounts on this computer, in their order:');
+      expect(textOf(r)).toContain('- "work": off, its own sign-in folder, no current usage reading.');
+      expect((r as Text).structuredContent).toMatchObject({ readable: true, registry: join(home, '.beethoven', 'engine'), accounts: [{ label: 'main' }, { label: 'work', enabled: false }] });
+      const bad = await client.callTool({ name: 'account_list', arguments: { label: 'main' } });
+      expect(bad.isError).toBe(true);
+    } finally {
+      await client.close();
+      rmSync(home, { recursive: true, force: true });
     }
   }, 60_000);
 

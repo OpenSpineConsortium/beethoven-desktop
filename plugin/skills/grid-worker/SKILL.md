@@ -1,6 +1,6 @@
 ---
 name: grid-worker
-description: Use when the student asks about their Claude Code worker on the university grid (start it, is it online, open it, stop it, its log, its files), or about signing in to the grid. Uses Beethoven's tools, never ssh from the shell.
+description: Use when the student asks about their Claude Code worker on the university grid (start it, is it online, open it, stop it, its log, its files), or about signing in to the grid, or which of their own Claude accounts are on this computer and how much each has used. Uses Beethoven's tools, never ssh from the shell.
 ---
 
 # The student's grid worker, through Beethoven
@@ -18,6 +18,9 @@ university's grid. Use them, in this order, and nothing else for the grid:
 3. `worker_start` asks for the worker; `open_in_claude` opens its Claude Code link once it is online.
 4. `worker_log`, `workspace_list` and `workspace_read` show what the worker did and its files.
 5. `worker_stop` ends the worker. Ask the student before using it.
+6. `account_list` shows the student's own Claude accounts on this computer, as the account switcher
+   (`bee`) keeps them, with the last usage reading of each. It only reads; to add, turn on or turn off
+   an account the student runs `bee account add`, `enable` or `disable` in their own terminal.
 
 If the worker waits for a Claude sign-in, tell the student the line `worker_status` gives and that
 they run it themselves in the grid terminal. Never run it for them.

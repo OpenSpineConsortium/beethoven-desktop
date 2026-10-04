@@ -15,6 +15,7 @@ const INSTRUCTIONS = [
   'Start with grid_check; if it says the student is not signed in, use grid_sign_in, which opens a terminal where the student signs in themselves (never ask the student for a password or code: no tool takes one).',
   'worker_status tells where the worker is; worker_start asks for it; open_in_claude opens it once it is online. worker_stop ends it: ask the student first.',
   'workspace_list and workspace_read show the worker\'s own folder. worker_status asks the grid at most once a minute; there is no need to call it more often.',
+  "account_list shows the student's own Claude accounts on this computer, as the account switcher keeps them; it only reads that list, and the student changes it in their own terminal.",
   "Never suggest adding the grid as an SSH connection in Claude Code Desktop: that installs and runs Claude Code on the grid's login node, which the grid forbids.",
 ].join(' ');
 

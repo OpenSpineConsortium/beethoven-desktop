@@ -36,6 +36,7 @@
     { "name": "worker_log", "description": "The last lines of your worker's progress log." },
     { "name": "workspace_list", "description": "Lists a folder of your worker's workspace." },
     { "name": "workspace_read", "description": "Reads a text file of your worker's workspace; credentials are never shown." },
+    { "name": "account_list", "description": "Your own Claude accounts on this computer, as the account switcher keeps them, with their last usage readings." },
     { "name": "open_in_claude", "description": "Opens your worker's Claude Code link in your browser." }
   ],
   "keywords": ["hpc", "slurm", "grid", "ssh", "university", "remote control"],
