@@ -32,6 +32,7 @@ edition, so it is not offered to students until they do (`docs/DESIGN.md`, "Befo
 | `worker_stop` | One `stop`; nothing is deleted. |
 | `worker_log` | The last lines of `progress.log`. |
 | `workspace_list`, `workspace_read` | The worker's workspace, over sshd's own sftp, inside the workspace only; links are not followed, credential-named files are refused, credential-shaped text is redacted. |
+| `account_list` | The student's own Claude accounts on this computer, as the engine's account switcher (`bee`) keeps them: label, on or off, resting until when, the last 5-hour and 7-day usage readings. Reads `accounts.json` and `usage/<label>.json` in bee's folder (`$BEE_REGISTRY_DIR`, else `$BEETHOVEN_HOME/engine`, else `~/.beethoven/engine`) and nothing else: no sign-in folder is opened, nothing goes to the grid, it needs no grid sign-in, and the list is never changed. |
 | `open_in_claude` | Hands the worker's checked `https://claude.ai/code…` link to the operating system's opener. |
 
 On the grid it sends only the gate's own lines (`version`, `status`, `connect … --login never`,

@@ -91,3 +91,11 @@ Settings for all of them: grid account `go2432`, site `wayne`, worker name `work
     Note what Desktop installs and where, and whether its Claude Code starts. Expected from the grid's
     CentOS 7: it does not (`docs/EDITIONS.md` section 3). If it does, Desktop's SSH becomes a way in.
     Outcome: not yet measured.
+
+15. **Your Claude accounts on this computer.** After `bee account add` for two of your accounts on the
+    laptop (the engine's `docs/bee/RUNBOOK.md`, steps L1 to L5), ask "which Claude accounts do I have
+    here", once in Desktop's Chat tab and once in Claude Code with the plugin. Expected: both labels,
+    on or off, and, once each account's status line has shown its usage, the 5-hour and 7-day readings,
+    the same as `bee account list` prints. Note whether `BEE_REGISTRY_DIR`, if you set one, reaches the
+    Desktop extension (Desktop starts it with its own environment) or only the plugin.
+    Outcome: not yet measured.
