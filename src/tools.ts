@@ -159,6 +159,27 @@ function describeSteps(name: string, steps: Step[], failed?: Step & { kind: 'fai
 
 // ---- the tools --------------------------------------------------------------------------------------------
 
+/** the one tool that needs no grid, so the server offers it whatever the grid settings say */
+export function accountTool(env: NodeJS.ProcessEnv = process.env): Tool {
+  return {
+    name: 'account_list',
+    title: 'Your Claude accounts on this computer',
+    description:
+      "Lists the student's own Claude accounts on this computer as the account switcher (bee) keeps them: each one's label, whether it is on, " +
+      'whether it rests and until when, and the last 5-hour and 7-day usage its status line saw. It reads bee\'s account list and one small usage file per account, ' +
+      'and nothing else: no sign-in folder is opened, and it needs no grid sign-in and sends nothing to the grid. Beethoven never changes the list; ' +
+      'the student does, with bee in their own terminal.',
+    inputSchema: schema({}),
+    annotations: { readOnlyHint: true, openWorldHint: false },
+    call: async (args) => {
+      only(args, []);
+      const now = Date.now();
+      const d = describeAccounts(readAccounts(registryDir(env), now), now);
+      return result(d.text, d.structured, d.isError);
+    },
+  };
+}
+
 export function tools(grid: Grid): Tool[] {
   const title = grid.profile.sessionTitle;
   const nameArg = (args: Record<string, unknown>) => optString(args, 'name');
@@ -347,22 +368,7 @@ export function tools(grid: Grid): Tool[] {
         });
       },
     },
-    {
-      name: 'account_list',
-      title: 'Your Claude accounts on this computer',
-      description:
-        "Lists the student's own Claude accounts on this computer as the account switcher (bee) keeps them: each one's label, whether it is on, " +
-        'whether it rests and until when, and the last 5-hour and 7-day usage its status line saw. It reads two small files of that list and nothing else: ' +
-        'no sign-in folder is opened, and nothing is sent to the grid. Beethoven never changes the list; the student does, with bee in their own terminal.',
-      inputSchema: schema({}),
-      annotations: { readOnlyHint: true, openWorldHint: false },
-      call: async (args) => {
-        only(args, []);
-        const now = Date.now();
-        const d = describeAccounts(readAccounts(registryDir(process.env), now), now);
-        return result(d.text, d.structured, d.isError);
-      },
-    },
+    accountTool(),
     {
       name: 'open_in_claude',
       title: 'Open the worker in Claude',

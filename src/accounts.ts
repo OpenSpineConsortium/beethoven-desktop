@@ -1,9 +1,10 @@
 // The student's own Claude accounts on this computer, as the engine's account switcher (`bee`, in the
 // engine repository, src/beethoven_research/bee/) keeps them: <registry>/accounts.json and
-// <registry>/usage/<label>.json, and no other file. A list holds labels, the folder each account signs
-// in to, on or off, a resting time and the last usage reading the account's status line saw; it holds
-// nothing from inside a sign-in folder, and this module never opens, lists or checks one, so the view
-// cannot reach a credential. It only reads: bee writes the list, and the student runs bee.
+// <registry>/usage/<label>.json, and no other file; each must be a plain file, never a link. A list holds
+// labels, the folder each account signs in to, on or off, a resting time and the last usage reading the
+// account's status line saw; it holds nothing from inside a sign-in folder, and this module never opens,
+// lists or checks one, so the view cannot reach a credential. It only reads: bee writes the list, and the
+// student runs bee. Every file is opened through readSmall, the one place this module touches the disk.
 import { lstatSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -13,7 +14,10 @@ const MAX_USAGE = 4 * 1024;
 const LABEL_RE = /^[a-z0-9][a-z0-9-]{0,31}$/;
 // accounts.json's own fields (bee's RegistryFile and AccountRecord forbid any other)
 const RECORD_KEYS = ['label', 'path', 'enabled', 'order', 'hibernate_until'];
-const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+// the form bee's utc_text writes, and the offsets Python's fromisoformat also takes in that form
+const ISO_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|([+-])(\d{2}):(\d{2}))$/;
+// bee prints a time only before the year 10000 (utc_text's contract); a later one stops `bee account list`
+const MAX_EPOCH = 253402300800;
 
 export interface AccountRow {
   label: string;
@@ -30,12 +34,12 @@ export interface AccountRow {
 
 export type AccountList =
   | { ok: true; registry: string; found: boolean; accounts: AccountRow[] }
-  | { ok: false; registry: string; why: string };
+  /** `beeToo`: bee refuses the same list, so `bee account list` can say what is wrong with it */
+  | { ok: false; registry: string; why: string; beeToo: boolean };
 
-/** where bee keeps its account files, by bee's own rule: $BEE_REGISTRY_DIR, else <$BEETHOVEN_HOME or ~/.beethoven>/engine */
+/** where bee keeps its account files, by bee's own rule: $BEE_REGISTRY_DIR, else <$BEETHOVEN_HOME or ~/.beethoven>/engine (an empty value counts as unset, untrimmed, as in Python's `or`) */
 export function registryDir(env: NodeJS.ProcessEnv, home = homedir()): string {
-  const set = (k: string) => (env[k] ?? '').trim();
-  return resolve(set('BEE_REGISTRY_DIR') || join(set('BEETHOVEN_HOME') || join(home, '.beethoven'), 'engine'));
+  return resolve(env.BEE_REGISTRY_DIR || join(env.BEETHOVEN_HOME || join(home, '.beethoven'), 'engine'));
 }
 
 /**
@@ -56,6 +60,28 @@ export function readSmall(path: string, max: number): string | null {
 
 const utc = (s: number) => new Date(s * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z');
 
+/** epoch seconds of a resting time, or null for one bee would not take or could not print; no date is rolled over */
+export function epochOf(text: unknown): number | null {
+  const m = typeof text === 'string' ? ISO_RE.exec(text) : null;
+  if (!m) return null;
+  const [y, mo, d, h, mi, sec] = m.slice(1, 7).map(Number) as [number, number, number, number, number, number];
+  const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mo - 1];
+  if (y < 1 || days === undefined || d < 1 || d > days || h > 23 || mi > 59 || sec > 59) return null;
+  let offset = 0;
+  if (m[7]) {
+    const [oh, om] = [Number(m[8]), Number(m[9])];
+    if (oh > 23 || om > 59) return null;
+    offset = (m[7] === '-' ? -1 : 1) * (oh * 3600 + om * 60);
+  }
+  // setUTCFullYear, because Date.UTC reads a year below 100 as 19xx
+  const at = new Date(0);
+  at.setUTCFullYear(y, mo - 1, d);
+  at.setUTCHours(h, mi, sec, 0);
+  const t = at.getTime() / 1000 - offset;
+  return t < MAX_EPOCH ? t : null;
+}
+
 // bee writes either path family on any system, so neither is asked of this one
 function isAbsolute(p: string): boolean {
   return /^[/\\]/.test(p) || /^[A-Za-z]:[\\/]/.test(p);
@@ -75,14 +101,14 @@ function record(v: unknown, i: number): { label: string; path: string | null; en
   if (typeof r.order !== 'number' || !Number.isInteger(r.order) || r.order < 0) throw new Unreadable(`"${label}" has no place in the order`);
   let until = 0;
   if (r.hibernate_until !== undefined && r.hibernate_until !== null) {
-    const t = typeof r.hibernate_until === 'string' && ISO_RE.test(r.hibernate_until) ? Date.parse(r.hibernate_until) : NaN;
-    if (Number.isNaN(t)) throw new Unreadable(`"${label}" has a resting time that is not a time`);
-    until = Math.floor(t / 1000);
+    const t = epochOf(r.hibernate_until);
+    if (t === null) throw new Unreadable(`"${label}" has a resting time that is not a time bee writes`);
+    until = t;
   }
   return { label, path: r.path as string | null, enabled: r.enabled !== false, order: r.order, until };
 }
 
-/** bee's usage reading: whole percentages and epoch seconds, null where Claude Code sent none; anything else is no reading */
+/** bee's usage reading: whole percentages and epoch seconds, null where Claude Code sent none; anything else, or a time bee could not print, is no reading */
 function usage(text: string | null): { five: number; fiveResets: number; seven: number; sevenResets: number } | null {
   if (text === null) return null;
   try {
@@ -91,7 +117,7 @@ function usage(text: string | null): { five: number; fiveResets: number; seven: 
     const n = (k: string): number => {
       const v = (u as Record<string, unknown>)[k];
       if (v === undefined || v === null) return 0;
-      if (typeof v !== 'number' || !Number.isFinite(v)) throw new Error(k);
+      if (typeof v !== 'number' || !Number.isFinite(v) || Math.abs(v) >= MAX_EPOCH) throw new Error(k);
       return Math.trunc(v);
     };
     return { five: n('five_hour_pct'), fiveResets: n('five_hour_resets_at'), seven: n('seven_day_pct'), sevenResets: n('seven_day_resets_at') };
@@ -101,7 +127,7 @@ function usage(text: string | null): { five: number; fiveResets: number; seven: 
 }
 
 /**
- * The list as `bee account list --json` gives it, read from the two files: in their order, a resting time only
+ * The list as `bee account list --json` gives it, read from bee's files: in their order, a resting time only
  * while it lasts, a usage reading only while its window has not reset. `read` is the one way a file is opened,
  * so a test can see every path asked for.
  */
@@ -114,14 +140,18 @@ export function readAccounts(registry: string, nowMs: number, read: (path: strin
     parsed = JSON.parse(text);
   } catch (e) {
     const m = (e as Error).message;
-    const why = m === 'too large' ? 'it is larger than an account list can be' : m === 'not a plain file' ? 'it is not a plain file' : e instanceof SyntaxError ? 'it is not JSON' : 'it could not be opened';
-    return { ok: false, registry, why };
+    if (e instanceof SyntaxError) return { ok: false, registry, why: 'it is not JSON', beeToo: true };
+    const why = m === 'too large' ? 'it is larger than an account list can be' : m === 'not a plain file' ? 'it is a link or not a plain file, and Beethoven opens only a plain file there' : 'it could not be opened';
+    return { ok: false, registry, why, beeToo: false };
   }
   try {
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Unreadable('it is not an account list');
     const top = parsed as Record<string, unknown>;
     if (Object.keys(top).some((k) => k !== 'version' && k !== 'accounts')) throw new Unreadable('it has a field bee never writes');
-    if (top.version !== undefined && top.version !== 1) throw new Unreadable(`it is version ${String(top.version)}, newer than this Beethoven reads`);
+    // the value itself is never repeated: the file is text anyone could have written, and the answer goes to the model
+    if (top.version !== undefined && top.version !== 1) {
+      throw new Unreadable(typeof top.version === 'number' && Number.isInteger(top.version) && top.version > 1 ? 'it is a newer version than this Beethoven reads' : 'its version is not one bee writes');
+    }
     if (top.accounts !== undefined && !Array.isArray(top.accounts)) throw new Unreadable('its accounts are not a list');
     const recs = ((top.accounts as unknown[] | undefined) ?? []).map(record);
     if (new Set(recs.map((r) => r.label)).size !== recs.length) throw new Unreadable('a label appears twice');
@@ -149,7 +179,7 @@ export function readAccounts(registry: string, nowMs: number, read: (path: strin
       });
     return { ok: true, registry, found: true, accounts };
   } catch (e) {
-    if (e instanceof Unreadable) return { ok: false, registry, why: e.message };
+    if (e instanceof Unreadable) return { ok: false, registry, why: e.message, beeToo: true };
     throw e;
   }
 }
@@ -158,14 +188,17 @@ export function describeAccounts(l: AccountList, asOfMs: number): { text: string
   const asOf = utc(Math.floor(asOfMs / 1000));
   if (!l.ok) {
     return {
-      text: `The list of your Claude accounts on this computer (${join(l.registry, 'accounts.json')}) could not be read: ${l.why}. Beethoven changes nothing in it; bee account list, in a terminal, says what is wrong.`,
+      text: `The list of your Claude accounts on this computer (${join(l.registry, 'accounts.json')}) could not be read: ${l.why}. Beethoven changes nothing in it.${l.beeToo ? ' bee account list, in your own terminal, says what is wrong.' : ''}`,
       structured: { accounts: [], readable: false, registry: l.registry, as_of: asOf },
       isError: true,
     };
   }
   if (l.accounts.length === 0) {
     return {
-      text: `No Claude accounts are listed on this computer${l.found ? '' : ' yet'}. The account switcher keeps that list: bee account add LABEL, in your own terminal, adds an account and signs it in there. Beethoven only reads the list.`,
+      // the folder is named: bee may have been told to keep its list elsewhere, which this server is not told
+      text: l.found
+        ? `The account list in ${join(l.registry, 'accounts.json')} holds no accounts. In your own terminal, bee account add LABEL adds one and signs it in. Beethoven only reads the list.`
+        : `No account list was found in ${l.registry}. The account switcher, bee, keeps its list there unless it was set to use another folder, which Beethoven does not read. In your own terminal, bee account list shows the accounts bee sees, and bee account add LABEL adds one and signs it in. Beethoven only reads the list.`,
       structured: { accounts: [], readable: true, registry: l.registry, as_of: asOf },
       isError: false,
     };

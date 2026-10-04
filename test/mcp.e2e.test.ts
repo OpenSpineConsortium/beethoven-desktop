@@ -69,12 +69,12 @@ describe('the built server, through the MCP SDK client', () => {
     }
   }, 60_000);
 
-  it('account_list reads the list bee keeps in the home folder, and sends nothing to the grid', async () => {
+  it('account_list reads the list bee keeps in the home folder, with no grid in reach', async () => {
     const home = mkdtempSync(join(tmpdir(), 'bd-home-'));
     mkdirSync(join(home, '.beethoven', 'engine'), { recursive: true });
     writeFileSync(join(home, '.beethoven', 'engine', 'accounts.json'), JSON.stringify({ version: 1, accounts: [{ label: 'main', path: null, enabled: true, order: 0, hibernate_until: null }, { label: 'work', path: join(home, 'w'), enabled: false, order: 1 }] }));
-    // no ssh on PATH: a request to the grid would fail, and this one makes none. Windows finds the home in USERPROFILE.
-    const { client } = await connect({ PATH: '', HOME: home, USERPROFILE: home, BEETHOVEN_DESKTOP_ACCOUNT: 'ab1234' });
+    // no lab sshd is running for this test, and the list needs none. Windows finds the home in USERPROFILE.
+    const { client } = await connect({ PATH: process.env.PATH ?? '', HOME: home, USERPROFILE: home, BEETHOVEN_DESKTOP_ACCOUNT: 'ab1234' });
     try {
       const r = await client.callTool({ name: 'account_list', arguments: {} });
       expect(r.isError).toBeFalsy();
@@ -93,10 +93,14 @@ describe('the built server, through the MCP SDK client', () => {
     const { client } = await connect({ PATH: process.env.PATH ?? '', HOME: tmpdir(), BEETHOVEN_DESKTOP_SITE: 'nowhere', BEETHOVEN_DESKTOP_ACCOUNT: 'ab1234' });
     try {
       const { tools } = await client.listTools();
-      expect(tools.map((t) => t.name)).toEqual(['grid_check']);
+      expect(tools.map((t) => t.name)).toEqual(['grid_check', 'account_list']);
       const r = await client.callTool({ name: 'grid_check', arguments: {} });
       expect(r.isError).toBe(true);
       expect(textOf(r)).toMatch(/can't reach a grid/);
+      // the account list on this computer needs no grid, so a grid setting that is wrong does not hide it
+      const a = await client.callTool({ name: 'account_list', arguments: {} });
+      expect(textOf(a)).not.toMatch(/can't reach a grid/);
+      expect((a as Text).structuredContent).toHaveProperty('accounts');
     } finally {
       await client.close();
     }

@@ -60,7 +60,7 @@ publisher.
 ## Layout
 
 - `src/`: `index.ts` (the stdio server), `mcp.ts` (JSON-RPC 2.0 and MCP, hand-written, no SDK at run
-  time), `tools.ts` (the twelve tools), `accounts.ts` (the student's own Claude accounts on this computer, from the two files of the engine's `bee` and nothing else), `runs.ts` (every worker's `status.json`, and nothing else of a run folder), `grid.ts` (the verbs and their floors), `ssh.ts` (argv, the kept
+  time), `tools.ts` (the twelve tools), `accounts.ts` (the student's own Claude accounts on this computer, from the engine's `bee` list and its usage files and nothing else), `runs.ts` (every worker's `status.json`, and nothing else of a run folder), `grid.ts` (the verbs and their floors), `ssh.ts` (argv, the kept
   sign-in, the pinned host key), `sftp.ts` (a read-only SFTP v3 client), `workspace.ts` (the path rules),
   `terminal.ts` (the sign-in launcher, the terminal and the opener), `contract.ts` (mirrors the server
   repository's `docs/V11_CONTRACT.md` and `docs/V12_CONTRACT.md`), `redact.ts`, `profile.ts`, `config.ts`.

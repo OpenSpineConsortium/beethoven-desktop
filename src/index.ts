@@ -7,7 +7,7 @@ import { configFrom } from './config.js';
 import { Grid } from './grid.js';
 import { McpServer, serveStdio, type Tool } from './mcp.js';
 import { loadProfile, ProfileError } from './profile.js';
-import { tools } from './tools.js';
+import { accountTool, tools } from './tools.js';
 import { NAME, PRODUCT_NAME, VERSION } from './version.js';
 
 const INSTRUCTIONS = [
@@ -15,7 +15,7 @@ const INSTRUCTIONS = [
   'Start with grid_check; if it says the student is not signed in, use grid_sign_in, which opens a terminal where the student signs in themselves (never ask the student for a password or code: no tool takes one).',
   'worker_status tells where the worker is; worker_start asks for it; open_in_claude opens it once it is online. worker_stop ends it: ask the student first.',
   'workspace_list and workspace_read show the worker\'s own folder. worker_status asks the grid at most once a minute; there is no need to call it more often.',
-  "account_list shows the student's own Claude accounts on this computer, as the account switcher keeps them; it only reads that list, and the student changes it in their own terminal.",
+  "account_list shows the student's own Claude accounts on this computer, as the account switcher keeps them; it needs no grid sign-in, it only reads that list, and the student changes it in their own terminal.",
   "Never suggest adding the grid as an SSH connection in Claude Code Desktop: that installs and runs Claude Code on the grid's login node, which the grid forbids.",
 ].join(' ');
 
@@ -29,9 +29,10 @@ function main(): void {
     const why = e instanceof ProfileError ? e.message : 'its site profile could not be read';
     // the server still answers, so the student reads why instead of a server that will not start
     problems.push(`Beethoven can't reach a grid: ${why}.`);
-    list = [{ name: 'grid_check', title: 'Check the grid connection', description: "Says why Beethoven can't reach a grid.", inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true }, call: async () => ({ content: [] }) }];
+    list = [{ name: 'grid_check', title: 'Check the grid connection', description: "Says why Beethoven can't reach a grid.", inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true }, call: async () => ({ content: [] }) }, accountTool()];
   }
-  if (problems.length) list = list.map((t) => ({ ...t, call: async () => ({ content: [{ type: 'text' as const, text: problems.join(' ') }], isError: true }) }));
+  // the grid settings' problems answer every grid tool; the account list on this computer needs no grid
+  if (problems.length) list = list.map((t) => (t.name === 'account_list' ? t : { ...t, call: async () => ({ content: [{ type: 'text' as const, text: problems.join(' ') }], isError: true }) }));
   process.stderr.write(`${NAME} ${VERSION} started\n`);
   serveStdio((write) => new McpServer({ name: NAME, title: PRODUCT_NAME, version: VERSION, instructions: INSTRUCTIONS }, list, write));
 }

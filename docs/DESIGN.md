@@ -77,7 +77,7 @@ status`, `connect` and `worker stop` directly, the prototype sends exactly the g
 | `worker_stop` | `stop NAME` |
 | `worker_log` | `read NAME progress.log` |
 | `worker_list` | none: sshd's sftp reads `<state_dir>/<name>/status.json` for each run folder, and no other file of it |
-| `account_list` | none, and nothing over sftp either: it reads two files on this computer (section 7) |
+| `account_list` | none, and nothing over sftp either: it reads bee's account list and usage files on this computer (section 7) |
 
 Why the gate: its word allowlist, its caps (three names a week, twelve starts an hour), its 60 s poll
 floor, its `--login never` and its output format are already reviewed and tested in the server repository,
@@ -122,8 +122,8 @@ Claude sign-in folder's names; deletions; output beside the protocol; the gate v
 The prototype is for the maintainer and the lab. Before any student installs it:
 
 1. **The agreement and privacy texts** (`LICENSE.txt`, `PRIVACY.md`, canonical in the browser repository)
-   must describe this edition (what it reads on the grid, the local folder, the pinned key, no requests to
-   the vendor), with integer version bumps, and the edition must show and record acceptance before its
+   must describe this edition (what it reads on the grid, the local folder, the pinned key, the engine's
+   account list it reads on this computer and puts in the conversation, no requests to the vendor), with integer version bumps, and the edition must show and record acceptance before its
    first grid request; it has no acceptance step yet.
 2. **The credential posture review** (BEE-157): the sign-in launcher, the kept master, the sftp path rules
    and the redactor, read by someone other than their author.
@@ -162,16 +162,25 @@ list on each machine. `account_list` shows that list on this computer and change
 else `~/.beethoven/engine`, the same rule bee uses. In it, `accounts.json` (version 1: label, the folder
 each account signs in to, on or off, order, resting time; at most 64 KiB) and, per listed label,
 `usage/<label>.json` (the last 5-hour and 7-day readings the account's status line saw; at most 4 KiB).
-Each must be a plain file: bee replaces its files whole, so a link (which could point anywhere) is
-refused unread, the list with a sentence and a reading as no reading. The folder each account signs in to is shown in the structured result as a path and is never opened,
-listed or checked; a unit test records every path the reader asks for. No process is started (bee is not
-run), and nothing goes to the grid.
+Each must be a plain file: bee replaces its files whole, so a link in place of either (which could point
+anywhere) is refused unread, the list with a sentence and a reading as no reading. The folder each
+account signs in to is shown in the structured result as a path and is never opened, listed or checked.
+Two unit tests hold this: one records every path the reader asks for, and one shows that the module
+reaches the disk only through that reader (its imports, and one `lstat` and one read, both inside it).
+No process is started (bee is not run), and nothing goes to the grid. The tool needs no grid sign-in and
+no grid settings: the server offers it even when the site or the grid account in the settings is wrong.
+Nothing from the files is repeated in a sentence except labels (bee's pattern), times and percentages; a
+refusal names what is wrong, never the value.
 
 **The same answer as bee.** The rows are `bee account list --json`'s: in order, a resting time only while
 it lasts, a reading only until its window resets. A list bee refuses (another version, a field bee never
-writes, a label or folder twice, a relative folder, a time without its zone) is refused here with a plain
-sentence, never shown in part. Checked once against bee itself at `beethoven-research` b7b8650: the same
-rows for a four-account fixture, and the same verdict on twelve lists, ten refused and two taken.
+writes, a label or folder twice, a relative folder, a time without its zone or a date that does not
+exist) is refused here with a plain sentence, never shown in part. Checked against bee itself at
+`beethoven-research` b7b8650: the same rows for a four-account fixture, the same verdict on twelve lists
+(ten refused, two taken) and on eight resting times at the edges (leap days, year 50, before 1970, an
+offset with a fraction, the end of the year 9999). Where they part, it is on input bee never writes: a
+resting time in another ISO form Python also reads (no seconds, a space for the `T`) is refused here,
+and a usage time past the year 9999, which stops `bee account list` altogether, is no reading here.
 
 **Not here yet.** The list on the grid (bee keeps one there too, under the grid account's
 `~/.beethoven/engine`): reading it would widen the sftp reads beyond the workspace and each run's

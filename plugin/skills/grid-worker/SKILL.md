@@ -19,8 +19,9 @@ university's grid. Use them, in this order, and nothing else for the grid:
 4. `worker_log`, `workspace_list` and `workspace_read` show what the worker did and its files.
 5. `worker_stop` ends the worker. Ask the student before using it.
 6. `account_list` shows the student's own Claude accounts on this computer, as the account switcher
-   (`bee`) keeps them, with the last usage reading of each. It only reads; to add, turn on or turn off
-   an account the student runs `bee account add`, `enable` or `disable` in their own terminal.
+   (`bee`) keeps them, with the last usage reading of each. It needs no grid sign-in, so use it directly
+   when that is all the student asks. It only reads; to add, turn on or turn off an account the student
+   runs `bee account add`, `enable` or `disable` in their own terminal.
 
 If the worker waits for a Claude sign-in, tell the student the line `worker_status` gives and that
 they run it themselves in the grid terminal. Never run it for them.
