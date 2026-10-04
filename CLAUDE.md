@@ -13,6 +13,8 @@ publisher.
 
 - `docs/DESIGN.md` (what this edition is, what it never does, what must happen before students).
 - `docs/LAPTOP_CHECKS.md` (what only a real machine and the real grid can settle; outcomes recorded there).
+- `docs/EDITIONS.md` (what the three editions share, Claude Code Desktop's own SSH, and the client side of
+  teams across accounts and grid jobs).
 - The non-negotiable rules in the two other repositories' `CLAUDE.md` govern here too, unchanged. The
   ones this code touches most are restated below; when they differ, theirs win.
 
@@ -24,7 +26,10 @@ publisher.
   is `--login never`); the student signs in to Claude only in their own terminal on a compute node.
 - **Never usage credits, by anyone, ever** (greg, 2026-10-04, same rank as every other rule here). No
   API key, no billing setting, nothing that asks for or relies on paid usage beyond the student's own
-  flat-rate subscription. Switching between accounts is not this repository's to build.
+  flat-rate subscription. Several Claude accounts of the student's own may run workers at once (greg,
+  2026-10-04 02:30Z); this edition shows which account each worker reported and never holds, copies or
+  switches a sign-in. Which sign-in a job uses, and handing the lead between accounts, is the engine's
+  (`beethoven-research`, `BUILD_PLAN.md` section 17).
 - **No secret in a tool, a setting, an argv, a log or a file.** No tool schema or `user_config` field
   takes a password, a code, a key or a token. The grid password and one-time code are typed only into
   ssh's own prompt in a terminal window the student sees; this process never holds them. No askpass,
@@ -38,10 +43,12 @@ publisher.
   reads. Nothing of ours runs on the login node beyond that; no container command, no `node`, no
   `python3`, no Claude Code there. Status at most once a minute; starts and stops at most once a minute.
   Never suggest adding the grid to Claude Code Desktop's SSH connections: that installs and runs
-  Claude Code on the login node.
+  Claude Code on the login node, and through a jump to a compute node it installs a build that the
+  grid's CentOS 7 cannot run (`docs/EDITIONS.md` section 3).
 - **Nothing is deleted**, here or on the grid. The sftp client has no request that writes, renames or
   removes. Workspace reads stay inside `<state_dir>/workspaces/<name>` by the grid's own REALPATH, never
-  follow a link, refuse credential-named files and redact credential-shaped text.
+  follow a link, refuse credential-named files and redact credential-shaped text. Of a run folder only
+  `status.json` is ever opened.
 - **No code on claude.ai.** One checked `https://claude.ai/code…` link is handed to the operating
   system's opener; nothing else touches claude.ai.
 - **Students see plain words.** Tool results a student reads say what happened in sentences; no
@@ -53,7 +60,7 @@ publisher.
 ## Layout
 
 - `src/`: `index.ts` (the stdio server), `mcp.ts` (JSON-RPC 2.0 and MCP, hand-written, no SDK at run
-  time), `tools.ts` (the ten tools), `grid.ts` (the verbs and their floors), `ssh.ts` (argv, the kept
+  time), `tools.ts` (the eleven tools), `runs.ts` (every worker's `status.json`, and nothing else of a run folder), `grid.ts` (the verbs and their floors), `ssh.ts` (argv, the kept
   sign-in, the pinned host key), `sftp.ts` (a read-only SFTP v3 client), `workspace.ts` (the path rules),
   `terminal.ts` (the sign-in launcher, the terminal and the opener), `contract.ts` (mirrors the server
   repository's `docs/V11_CONTRACT.md` and `docs/V12_CONTRACT.md`), `redact.ts`, `profile.ts`, `config.ts`.

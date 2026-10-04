@@ -1,9 +1,10 @@
-// The tools, exactly: ten, each a fixed request with checked arguments. There is no tool that runs a
+// The tools, exactly: eleven, each a fixed request with checked arguments. There is no tool that runs a
 // command of the model's choosing, takes a path outside the worker's workspace, or takes a password, a
 // code, a key or a token; the student's sign-in happens in their own terminal. Every result passes a
 // redactor before the model sees it. The annotations say truthfully what each tool does.
 import { linkOf, PERMISSION_MODES, type PermissionMode, type StatusJson, type Step } from './contract.js';
 import type { Grid, Outcome } from './grid.js';
+import type { WorkerRow } from './runs.js';
 import { ArgError, type Tool, type ToolResult } from './mcp.js';
 import { redact } from './redact.js';
 import { DEFAULT_READ, MAX_READ } from './workspace.js';
@@ -95,6 +96,43 @@ export function describeStatus(s: StatusJson, asOf: number, nextAt: number, cach
       as_of: iso(asOf),
       next_check_after: iso(nextAt),
     },
+  };
+}
+
+const REPORTING = ['starting', 'need_login', 'need_consent', 'running', 'online'];
+const QUIET_MIN = 5;
+
+/** one line per worker, then who each Claude account is running: the view a team spread over jobs and accounts needs */
+export function describeWorkers(rows: WorkerRow[], truncated: boolean, asOf: number, cached: boolean, title: string): { text: string; structured: Record<string, unknown> } {
+  if (rows.length === 0) {
+    return { text: `No worker has been started under this grid account on the ${title} yet.`, structured: { workers: [], as_of: iso(asOf) } };
+  }
+  const lines = [`${rows.length} worker${rows.length === 1 ? '' : 's'} under this grid account on the ${title}:`];
+  for (const w of rows) {
+    const facts = [w.state === 'unreadable' ? 'its status file could not be read' : w.state];
+    if (w.node) facts.push(`on ${w.node}`);
+    if (w.job) facts.push(`job ${w.job}`);
+    if (w.next_job) facts.push(`next job ${w.next_job} queued`);
+    if (w.claude_signed_in === true) facts.push(`Claude account ${w.claude_account || 'not named'}${w.claude_plan ? ` (${w.claude_plan})` : ''}`);
+    if (w.claude_signed_in === false) facts.push('not signed in to Claude');
+    if (w.link) facts.push('has a Claude link');
+    // a running job rewrites its status every 30 s; silence from one that says it is running means its job may be gone
+    const quiet = REPORTING.includes(w.state) && Date.parse(w.updated_at) ? Math.floor((asOf - Date.parse(w.updated_at)) / 60_000) : 0;
+    if (quiet >= QUIET_MIN) facts.push(`but it has not written its status for ${quiet} minutes, so its job may have ended without saying so (worker_status asks the scheduler)`);
+    lines.push(`- "${w.name}": ${facts.join(', ')}.`);
+  }
+  const by = new Map<string, number>();
+  for (const w of rows) {
+    if (!w.claude_signed_in || ['stopped', 'error', 'unreadable', 'unknown'].includes(w.state)) continue;
+    const a = w.claude_account || 'an account Claude Code did not name';
+    by.set(a, (by.get(a) ?? 0) + 1);
+  }
+  if (by.size > 0) lines.push(`Running under: ${[...by].map(([a, n]) => `${a} (${n})`).join(', ')}.`);
+  if (truncated) lines.push(`There are more than ${rows.length}; only the first ${rows.length} are shown.`);
+  lines.push(`${cached ? 'As of' : 'Read from the grid at'} ${iso(asOf)}. worker_status, worker_stop, worker_log and open_in_claude take any of these names.`);
+  return {
+    text: lines.join('\n'),
+    structured: { workers: rows, truncated, as_of: iso(asOf) },
   };
 }
 
@@ -201,6 +239,23 @@ export function tools(grid: Grid): Tool[] {
         only(args, ['name']);
         return wrap(grid.status(nameArg(args)), (r) => {
           const d = describeStatus(r.s, r.asOf, r.nextAt, r.cached, title, grid.profile.sharedInstall);
+          return result(d.text, d.structured);
+        });
+      },
+    },
+    {
+      name: 'worker_list',
+      title: 'All your workers',
+      description:
+        "Lists every worker under the student's grid account, whichever computer, edition or teammate started it: each one's state, computer, job, " +
+        'the Claude account it reported, and whether it has a Claude link. It reads each worker\'s own status file and asks the scheduler nothing, ' +
+        'so nothing runs in the student\'s name unseen; the other worker tools take any of these names.',
+      inputSchema: schema({}),
+      annotations: { readOnlyHint: true, openWorldHint: true },
+      call: async (args) => {
+        only(args, []);
+        return wrap(grid.workers(), (r) => {
+          const d = describeWorkers(r.workers, r.truncated, r.asOf, r.cached, title);
           return result(d.text, d.structured);
         });
       },

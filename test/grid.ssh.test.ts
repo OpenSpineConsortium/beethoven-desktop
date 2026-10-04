@@ -172,6 +172,30 @@ describe.skipIf(missing)('the grid over a real sshd (gate stand-in)', () => {
     expect(calls(lab).at(-1)).toBe('read worker progress.log');
   });
 
+  it('lists every worker from its own status file, with no gate line and no scheduler call', async () => {
+    const helper = join(lab.state, 'helper');
+    mkdirSync(helper, { recursive: true });
+    writeFileSync(join(helper, 'status.json'), JSON.stringify({
+      state: 'online', job: '40509999', node: 'asx10', environment_url: 'https://claude.ai/code?environment=env_01Helper',
+      claude_login: { loggedIn: true, subscriptionType: 'max', email: 'second@example.edu' },
+    }));
+    writeFileSync(join(helper, 'job.token'), 'never-read');
+    // not workers: a folder with no status file, and a run folder that is a link to somewhere else
+    mkdirSync(join(lab.state, 'notes'), { recursive: true });
+    mkdirSync(join(lab.home, 'elsewhere'), { recursive: true });
+    writeFileSync(join(lab.home, 'elsewhere', 'status.json'), JSON.stringify({ state: 'online' }));
+    symlinkSync(join(lab.home, 'elsewhere'), join(lab.state, 'linked'));
+    const n = calls(lab).length;
+    const w = await r.grid.workers();
+    expect(w.ok, !w.ok ? w.message : '').toBe(true);
+    if (!w.ok) return;
+    expect(w.workers.map((x) => x.name)).toEqual(['helper', 'worker']);
+    expect(w.workers[0]).toMatchObject({ state: 'online', node: 'asx10', claude_account: 'second@example.edu', link: 'https://claude.ai/code?environment=env_01Helper' });
+    expect(w.workers[1]).toMatchObject({ state: 'online', link: null });
+    expect(calls(lab).length).toBe(n);
+    expect(await r.grid.workers()).toMatchObject({ ok: true, cached: true });
+  });
+
   describe('the workspace, over sftp', () => {
     beforeAll(() => {
       const ws = join(lab.state, 'workspaces', 'worker');
@@ -299,6 +323,12 @@ describe.skipIf(missing || !process.env.HPCWORKER_DIR)('the real hpcworker gate 
     const stop = await r.grid.stop();
     expect(stop.ok, !stop.ok ? stop.message : '').toBe(true);
   }, 240_000);
+
+  it('the worker the real framework queued is in the list of all workers', async () => {
+    const w = await r.grid.workers();
+    expect(w.ok, !w.ok ? w.message : '').toBe(true);
+    expect(w.ok && w.workers.map((x) => x.name)).toEqual(['worker']);
+  });
 
   it('the workspace the real framework made is listed over sftp', async () => {
     const l = await r.grid.list(undefined, '');

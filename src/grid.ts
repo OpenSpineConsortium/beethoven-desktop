@@ -17,6 +17,7 @@ import {
   targetOf, type Route, type RunResult, type Target,
 } from './ssh.js';
 import { launch, openerArgv, signInLines, terminalArgv, writeLauncher } from './terminal.js';
+import { listWorkers, type WorkerRow } from './runs.js';
 import { listDir, openWorkspace, readText, WorkspaceError, type FileText, type Listing } from './workspace.js';
 
 export const STATUS_FLOOR_MS = 60_000;
@@ -337,6 +338,13 @@ export class Grid {
         const ws = await openWorkspace(s, this.stateDir(nm.name), nm.name);
         return { ok: true as const, name: nm.name, ...(await readText(s, ws, rel, maxBytes)) };
       }),
+    );
+  }
+
+  /** every worker of this account, from the status files alone: no gate line, no scheduler call */
+  async workers(): Promise<Outcome<{ workers: WorkerRow[]; truncated: boolean; asOf: number; cached: boolean }>> {
+    return this.floored('workers', () =>
+      this.withSftp(async (s) => ({ ok: true as const, ...(await listWorkers(s, this.stateDir(this.cfg.worker))) })),
     );
   }
 

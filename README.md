@@ -27,6 +27,7 @@ edition, so it is not offered to students until they do (`docs/DESIGN.md`, "Befo
 | `grid_sign_out` | Ends that kept sign-in (`ssh -O exit`). |
 | `grid_check` | Is this computer signed in; the grid account; the version of the lab's worker tool; whether a Claude sign-in is on record on the grid. |
 | `worker_status` | The worker's state and its Claude link, at most once a minute. |
+| `worker_list` | Every worker under the grid account, whoever started it: state, computer, job, the Claude account it reported, whether it has a link. Read from each worker's own `status.json` over sftp; no gate line, no scheduler call. |
 | `worker_start` | One `connect` through the lab's shared copy of `hpcworker`, always without a Claude sign-in. |
 | `worker_stop` | One `stop`; nothing is deleted. |
 | `worker_log` | The last lines of `progress.log`. |
@@ -35,7 +36,7 @@ edition, so it is not offered to students until they do (`docs/DESIGN.md`, "Befo
 
 On the grid it sends only the gate's own lines (`version`, `status`, `connect … --login never`,
 `stop`, `read … progress.log`), run as `hpcworker gate` from the lab's shared copy over the student's
-session, and sftp reads. No tool runs a command of the model's choosing.
+session, and sftp reads (the workspace, and each worker's `status.json`). No tool runs a command of the model's choosing.
 
 ## What it never does
 

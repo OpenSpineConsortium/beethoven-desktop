@@ -30,6 +30,7 @@
     { "name": "grid_sign_out", "description": "Ends the sign-in Beethoven keeps on this computer; the worker keeps running." },
     { "name": "grid_check", "description": "Whether you are signed in, the grid account, and the lab's worker tool version." },
     { "name": "worker_status", "description": "Where your worker is: in line, starting, online with its Claude link, stopped." },
+    { "name": "worker_list", "description": "Every worker under your grid account, whoever started it, and the Claude account each one uses." },
     { "name": "worker_start", "description": "Asks the grid for your worker through the lab's shared worker tool." },
     { "name": "worker_stop", "description": "Stops your worker; nothing is deleted." },
     { "name": "worker_log", "description": "The last lines of your worker's progress log." },
