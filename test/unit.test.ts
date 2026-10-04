@@ -23,6 +23,11 @@ import { PRODUCT_NAME, TRADEMARK, VERSION } from '../src/version.js';
 
 const wayne = loadProfile('wayne');
 const T = { host: 'grid.wayne.edu', port: 22, account: 'ab1234' };
+// each would put Claude Code on a key, a token, a gateway or a cloud provider instead of the subscription
+const KEY_ROUTES = [
+  'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_BASE_URL', 'CLAUDE_CODE_OAUTH_TOKEN', 'CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR',
+  'CLAUDE_CODE_API_KEY_FILE_DESCRIPTOR', 'CLAUDE_CODE_USE_BEDROCK', 'CLAUDE_CODE_USE_VERTEX', 'CLAUDE_CODE_USE_FOUNDRY',
+];
 
 describe('the gate lines', () => {
   it('builds exactly the verbs this edition sends, and nothing from a bad value', () => {
@@ -168,8 +173,8 @@ describe('ssh', () => {
     expect(classify(r(null, '', { missing: true }))).toBe('not-installed');
   });
 
-  it('hands no credential-named variable to a child', () => {
-    const env = childEnv({ PATH: '/bin', ANTHROPIC_API_KEY: 'x', CLAUDE_CODE_OAUTH_TOKEN: 'x', CLAUDECODE: '1', GITHUB_TOKEN: 'x', SSH_AUTH_SOCK: '/s', HOME: '/h' });
+  it('hands no credential-named variable to a child, and none of a key\'s routes', () => {
+    const env = childEnv({ PATH: '/bin', ...Object.fromEntries(KEY_ROUTES.map((k) => [k, 'x'])), CLAUDECODE: '1', GITHUB_TOKEN: 'x', SSH_AUTH_SOCK: '/s', HOME: '/h' });
     expect(Object.keys(env).sort()).toEqual(['HOME', 'PATH', 'SSH_AUTH_SOCK']);
   });
 });
@@ -289,6 +294,51 @@ describe('the posture check', () => {
     const r = spawnSync(process.execPath, ['scripts/forbidden.mjs', 'src'], { encoding: 'utf8' });
     expect(r.stderr).toBe('');
     expect(r.status).toBe(0);
+  });
+
+  // no API key anywhere (greg, 2026-10-04 13:27Z): a key's route may be named only where it is taken away
+  const check = (files: Record<string, string>) => {
+    const d = mkdtempSync(join(tmpdir(), 'bd-forbidden-'));
+    try {
+      for (const [n, t] of Object.entries(files)) writeFileSync(join(d, n), t);
+      return spawnSync(process.execPath, ['scripts/forbidden.mjs', d], { encoding: 'utf8' });
+    } finally {
+      rmSync(d, { recursive: true, force: true });
+    }
+  };
+
+  it('passes the strips as they stand, and a drop list that names every route', () => {
+    const named = `const DROP_ENV = /^(?:${KEY_ROUTES.join('|')})$/;\n`;
+    const r = check({
+      'ssh.ts': readFileSync(new URL('../src/ssh.ts', import.meta.url), 'utf8') + named,
+      'redact.ts': readFileSync(new URL('../src/redact.ts', import.meta.url), 'utf8'),
+    });
+    expect(r.stderr).toBe('');
+    expect(r.status).toBe(0);
+  });
+
+  it('fails a route set, read or offered anywhere else', () => {
+    const planted = [
+      ...KEY_ROUTES.map((k) => `process.env.${k} = '1';`),
+      "const key = process.env['ANTHROPIC_API_KEY'];",
+      "const settings = { apiKeyHelper: '/bin/echo' };",
+      "spawn('claude', ['auth', 'login', '--console'], { shell: false });",
+      "const page = 'https://platform.claude.com/settings/keys';",
+      "const old = 'https://console.anthropic.com/';",
+      "const k = 'sk-ant-api03-x';",
+    ];
+    const r = check({ 'tools.ts': planted.join('\n') + '\n' });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain(`forbidden: ${planted.length} finding(s)`);
+    // the drop list's own line, but in another file; another line of ssh's own file; a read riding along
+    // between two patterns on a line shaped like each strip site
+    const moved = check({
+      'tools.ts': 'const DROP_ENV = /^(?:ANTHROPIC_API_KEY)$/;\n',
+      'ssh.ts': "env.ANTHROPIC_BASE_URL = 'https://gateway.example';\nconst DROP_ENV = /x/, k = process.env.ANTHROPIC_API_KEY, z = /y/;\n",
+      'redact.ts': "[/x/g, '[redacted]'], process.env.ANTHROPIC_API_KEY, [/y/g, '[redacted]'],\n",
+    });
+    expect(moved.status).toBe(1);
+    expect(moved.stderr).toContain('forbidden: 4 finding(s)');
   });
 });
 

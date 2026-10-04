@@ -1,5 +1,6 @@
 // The posture, checked on the code that ships: fails the build when the server could reach the network
-// by itself, run code from text, read a Claude credential, hand ssh a password, or delete a file.
+// by itself, run code from text, read a Claude credential, put Claude Code on an API key, hand ssh a
+// password, or delete a file.
 //
 //   node scripts/forbidden.mjs [DIR]        (default: src; the build runs it on dist/beethoven/server)
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -23,13 +24,29 @@ if (files.length === 0) {
 // the only modules the server may import: Node's own, for processes, files, paths and one hash
 const ALLOWED_IMPORTS = new Set(['node:child_process', 'node:crypto', 'node:fs', 'node:os', 'node:path', 'node:url']);
 
+// The lines where a name below may stand because it is taken away there, never set, read or offered: the
+// variables no child gets (ssh's DROP_ENV) and a redaction pattern. A name anywhere else fails. The line
+// must be one regular expression and nothing more: its body takes no bare `/` outside a [class], so no
+// code can ride along between two patterns on an allowed line.
+const STRIP_SITES = [
+  [['ssh.js', 'ssh.ts'], /^const DROP_ENV = \/(?:\\.|\[(?:\\.|[^\]\\])*\]|[^\/\\[])+\/[a-z]*;$/],
+  [['redact.js', 'redact.ts'], /^\[\/(?:\\.|\[(?:\\.|[^\]\\])*\]|[^\/\\[])+\/[a-z]*, '[^']*\[redacted\][^']*'\],$/],
+];
+
 const RULES = [
   [/\bfetch\s*\(/, 'a network request (fetch)'],
   [/\bXMLHttpRequest\b|\bWebSocket\b|\bEventSource\b/, 'a network client'],
   [/\beval\s*\(|\bnew\s+Function\s*\(/, 'code from text'],
   [/(?<![.\w])exec(?:Sync)?\s*\(|\bexecFile(?:Sync)?\b|\bfork\s*\(|shell:\s*true/, 'a shell (spawn with shell: false only)'],
   [/\bsshpass\b|\bexpect\s+-|PasswordAuthentication|SSH_ASKPASS|KbdInteractive/i, 'a password handed to ssh'],
-  [/setup-token|CLAUDE_CODE_OAUTH_TOKEN|auth logout/, 'a Claude credential or sign-out'],
+  [/setup-token|CLAUDE_CODE_OAUTH_TOKEN|auth logout/, 'a Claude credential or sign-out', STRIP_SITES],
+  // no API key anywhere (greg, 2026-10-04 13:27Z): a key, a token, a gateway, a cloud provider, the
+  // Console's sign-in or its pages would each put Claude Code on something other than the subscription
+  [
+    /ANTHROPIC_(?:API_KEY|AUTH_TOKEN|BASE_URL)|CLAUDE_CODE_(?:API_KEY_FILE_DESCRIPTOR|USE_(?:BEDROCK|VERTEX|FOUNDRY))|apiKeyHelper|console\.anthropic\.com|platform\.claude\.com|sk-ant-|--console\b/i,
+    'an API key, a gateway or a cloud provider for Claude Code',
+    STRIP_SITES,
+  ],
   [/~\/\.claude\b|\.beethoven\/claude|\.ashley\/claude|claude_config_dir/, "the Claude sign-in's folder"],
   [/\b(?:rmSync|rmdirSync|unlinkSync|unlink|rmdir)\s*\(|\bfs\.rm\b/, 'a deletion'],
   [/\bconsole\.(?:log|info|debug|warn|error)\b/, 'output beside the protocol (stdout is MCP only)'],
@@ -58,10 +75,10 @@ for (const f of files) {
       }
     }
   }
-  for (const [re, what] of RULES) {
+  for (const [re, what, sites = []] of RULES) {
     const lines = code.split('\n');
     lines.forEach((l, i) => {
-      if (re.test(l)) {
+      if (re.test(l) && !sites.some(([where, line]) => where.includes(basename(f)) && line.test(l.trim()))) {
         console.error(`${relative('.', f)}:${i + 1}: ${what}: ${l.trim().slice(0, 120)}`);
         bad++;
       }
