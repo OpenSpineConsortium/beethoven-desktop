@@ -1,0 +1,50 @@
+{
+  "name": "beethoven",
+  "displayName": "Beethoven",
+  "version": "1.0.0",
+  "description": "Start, watch and stop your Claude Code worker on your university's grid, and read its workspace, over your own ssh sign-in.",
+  "author": {
+    "name": "OpenSpineConsortium",
+    "url": "https://openspineconsortium.com/beethoven/"
+  },
+  "homepage": "https://openspineconsortium.com/beethoven/",
+  "keywords": ["hpc", "slurm", "grid", "ssh", "university"],
+  "mcpServers": {
+    "beethoven": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/index.js"],
+      "env": {
+        "BEETHOVEN_DESKTOP_SITE": "${user_config.site}",
+        "BEETHOVEN_DESKTOP_ACCOUNT": "${user_config.grid_account}",
+        "BEETHOVEN_DESKTOP_WORKER": "${user_config.worker_name}",
+        "BEETHOVEN_DESKTOP_USE_WSL": "${user_config.use_wsl}"
+      }
+    }
+  },
+  "userConfig": {
+    "grid_account": {
+      "type": "string",
+      "title": "Your grid account name",
+      "description": "The name you sign in to the grid with (at Wayne State, your AccessID, like ab1234). Not a password: Beethoven never asks for one.",
+      "required": true
+    },
+    "site": {
+      "type": "string",
+      "title": "Your university's grid",
+      "description": "The site profile: wayne is Wayne State's grid.",
+      "default": "wayne"
+    },
+    "worker_name": {
+      "type": "string",
+      "title": "Worker name",
+      "description": "Which of your workers the tools use when you don't name one.",
+      "default": "worker"
+    },
+    "use_wsl": {
+      "type": "boolean",
+      "title": "Use WSL's ssh (Windows only)",
+      "description": "Windows' own ssh can't keep one sign-in for every request; WSL's ssh can. Needs WSL with a Linux distribution that has the OpenSSH client.",
+      "default": false
+    }
+  }
+}
