@@ -1,0 +1,32 @@
+{
+  "name": "beethoven-desktop",
+  "displayName": "Beethoven",
+  "description": "Starts, watches and stops a Claude Code worker on your university's grid from Claude Desktop and Claude Code, over your own ssh sign-in.",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "license": "SEE LICENSE IN README.md",
+  "author": "OpenSpineConsortium",
+  "homepage": "https://openspineconsortium.com/beethoven/",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "build": "node scripts/build.mjs",
+    "forbidden": "node scripts/forbidden.mjs",
+    "pack": "node scripts/build.mjs --pack",
+    "gate": "npm run typecheck && npm run forbidden && npm test && npm run pack",
+    "hooks": "node scripts/hooks.mjs",
+    "prepare": "node scripts/hooks.mjs"
+  },
+  "devDependencies": {
+    "@anthropic-ai/mcpb": "2.1.2",
+    "@modelcontextprotocol/sdk": "1.32.0",
+    "@types/node": "22.20.4",
+    "typescript": "5.9.3",
+    "vite": "8.3.1",
+    "vitest": "5.0.2"
+  }
+}

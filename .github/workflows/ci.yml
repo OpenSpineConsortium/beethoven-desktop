@@ -1,0 +1,65 @@
+name: ci
+# The desktop edition's suite: on Linux against a real OpenSSH sshd run by the runner's own account on
+# 127.0.0.1 with the gate stand-in (test/lab.ts), the built server through the MCP SDK client, the
+# .mcpb packed and validated, and the Claude Code plugin validated; on macOS and Windows the parts that
+# need no sshd (the launcher text, the routes, the protocol). No secrets: nothing here can reach a grid,
+# claude.ai or any account. The real hpcworker gate test needs a checkout of the private server
+# repository (HPCWORKER_DIR), which this workflow cannot clone without a token, so it runs locally.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  suite:
+    name: typecheck, forbidden, tests against sshd, pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: OpenSSH's server, for the lab the ssh tests start (never run as a service)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q openssh-server
+          sudo systemctl disable --now ssh.socket ssh.service 2>/dev/null || true
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run forbidden
+      - name: vitest (the ssh tests must run here, not skip)
+        run: npm test
+        env:
+          BD_REQUIRE_LAB: '1'
+      - name: build, pack and validate the .mcpb
+        run: npm run pack
+      - name: validate the Claude Code plugin
+        run: npx -y @anthropic-ai/claude-code@2.1.289 plugin validate dist/beethoven
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beethoven-desktop
+          path: |
+            dist/beethoven-*.mcpb
+            dist/beethoven/
+          retention-days: 30
+
+  unit:
+    name: unit tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx vitest run test/unit.test.ts test/mcp.e2e.test.ts

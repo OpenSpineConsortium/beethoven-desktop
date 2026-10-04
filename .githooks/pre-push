@@ -1,0 +1,13 @@
+#!/bin/sh
+# The gate runs before every push, not only in CI (greg, project thread, 2026-10-04 02:11Z): the
+# typecheck, the forbidden-strings check, the tests and the packed, validated bundle. A push with a
+# red gate does not leave the machine. On a computer without sshd the ssh tests skip and say so; CI
+# runs them with BD_REQUIRE_LAB=1. Skip the gate only knowingly, with SKIP_GATE=1, and say so in the
+# commit.
+if [ "${SKIP_GATE:-}" = 1 ]; then
+  echo "pre-push: gate skipped (SKIP_GATE=1)" >&2
+  exit 0
+fi
+cd "$(git rev-parse --show-toplevel)" || exit 1
+echo "pre-push: running the gate (npm run gate) before the push" >&2
+exec npm run gate
