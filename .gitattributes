@@ -1,0 +1,21 @@
+# Line endings: everything text is LF in the repository AND in the working tree, on every platform.
+# The framework's scripts run on Linux clusters (bash and sbatch refuse CR), tools/deploy_shared.sh
+# refuses to publish CR files, and the framework tests check for CR. Without this file a Windows
+# checkout with core.autocrlf=true would turn them all into CRLF.
+* text=auto eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+*.tpl text eol=lf
+*.sbatch text eol=lf
+*.mjs text eol=lf
+*.ts text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.html text eol=lf
+framework/bin/hpcworker text eol=lf
+framework/VERSION text eol=lf
+*.png binary
+*.zip binary
+*.pdf binary
+*.ico binary
