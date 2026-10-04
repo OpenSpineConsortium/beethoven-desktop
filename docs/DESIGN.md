@@ -115,7 +115,10 @@ Requests go one at a time over the one connection.
 
 `scripts/forbidden.mjs` fails the build on what a text search can see of these (imports outside Node's
 own process, file, path and hash modules; `fetch`; `eval`; a shell; askpass and password options; the
-Claude sign-in folder's names; deletions; output beside the protocol; the gate verbs never sent).
+Claude sign-in folder's names; the names that would put Claude Code on an API key, a token, a gateway or
+a cloud provider, the Console's sign-in and pages, and a key's prefix (greg's "no API key anywhere",
+2026-10-04 13:27Z), except on the lines that take them away; deletions; output beside the protocol; the
+gate verbs never sent).
 
 ## 5. Before students
 

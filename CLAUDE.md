@@ -26,9 +26,14 @@ publisher.
   is `--login never`); the student signs in to Claude only in their own terminal on a compute node.
 - **Never usage credits, by anyone, ever** (greg, 2026-10-04, same rank as every other rule here). No
   API key, no billing setting, nothing that asks for or relies on paid usage beyond the student's own
-  flat-rate subscription. Several Claude accounts of the student's own may run workers at once (greg,
-  2026-10-04 02:30Z); this edition shows which account each worker reported and never holds, copies or
-  switches a sign-in. Which sign-in a job uses, and handing the lead between accounts, is the engine's
+  flat-rate subscription. greg, 2026-10-04 13:27Z: "no api key anywhere thats the only fundamental rule
+  of this software": no Console or API key, no `apiKeyHelper`, no Bedrock, Vertex or Foundry route, no
+  `ANTHROPIC_BASE_URL` gateway and no CI that runs Claude Code on a key or a token held as a secret
+  (claude-code-action or the like), in the code, the texts, the documents and the maintainer's own
+  tooling alike (`npm run forbidden` refuses their names in the shipped code except where they are
+  taken away). Several Claude accounts of the student's own may run workers at once (greg, 2026-10-04
+  02:30Z); this edition shows which account each worker reported and never holds, copies or switches a
+  sign-in. Which sign-in a job uses, and handing the lead between accounts, is the engine's
   (`beethoven-research`, `BUILD_PLAN.md` section 17).
 - **No secret in a tool, a setting, an argv, a log or a file.** No tool schema or `user_config` field
   takes a password, a code, a key or a token. The grid password and one-time code are typed only into
