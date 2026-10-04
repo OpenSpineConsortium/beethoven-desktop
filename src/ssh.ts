@@ -8,7 +8,7 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { posix, win32 } from 'node:path';
 import { ACCOUNT_RE } from './contract.js';
 import type { Config } from './config.js';
 import type { SiteProfile } from './profile.js';
@@ -41,6 +41,8 @@ export function wslPath(win: string): string {
 }
 
 export function routeFor(cfg: Pick<Config, 'useWsl' | 'sshPath'>, platform: NodeJS.Platform = process.platform, home: string = homedir(), env: NodeJS.ProcessEnv = process.env): Route {
+  // the paths of the platform the route is for, which is the one this process runs on outside the tests
+  const { join, dirname } = platform === 'win32' ? win32 : posix;
   const localDir = join(home, DIR_NAME);
   const localKnownHosts = join(localDir, 'known_hosts');
   if (platform === 'win32' && cfg.useWsl) {
