@@ -18,8 +18,10 @@ publisher. Nothing here has run against the real grid yet; `docs/LAPTOP_CHECKS.m
   from the environment either host sets.
 - **Claude Code Desktop's own SSH sessions** run a remote Claude Code: adding a host installs Claude Code
   on it and runs it there. On Wayne State's grid that host would be the login node, where the banner
-  bans `node` and C&IT asked for nothing container-related. So that feature is not a way in, and the
-  server's instructions and the plugin's skill tell the model never to suggest it.
+  bans `node` and C&IT asked for nothing container-related. Through a jump to a compute node of one's
+  own job the hop works, but the node's CentOS 7 cannot run the Claude Code Desktop installs
+  (`EDITIONS.md` section 3). So that feature is not a way in, as documented, and the server's
+  instructions and the plugin's skill tell the model never to suggest it.
 - **The browser edition** cannot open a terminal on the grid (its key is the gate's, forced to eight
   verbs, no pty) and shows three run files and no workspace. This edition adds what it cannot: a real
   terminal for the sign-in, and a read-only view of the worker's workspace.
@@ -60,6 +62,9 @@ variable named like a token, secret, password, key or a Claude/Anthropic setting
 
 ## 3. What runs on the grid
 
+(What the three editions share, Claude Code Desktop's own SSH sessions, and the client side of teams
+across accounts and grid jobs: `EDITIONS.md`.)
+
 **The gate's lines, run through the lab's shared copy.** Where the spike called `hpcworker worker
 status`, `connect` and `worker stop` directly, the prototype sends exactly the gate's verbs, as
 `env SSH_ORIGINAL_COMMAND='<line>' bash '<shared>/bin/hpcworker' gate` over the student's own session:
@@ -71,6 +76,7 @@ status`, `connect` and `worker stop` directly, the prototype sends exactly the g
 | `worker_start` | `connect NAME SITE - MODE chain` or `no-chain` (the gate adds `--login never`) |
 | `worker_stop` | `stop NAME` |
 | `worker_log` | `read NAME progress.log` |
+| `worker_list` | none: sshd's sftp reads `<state_dir>/<name>/status.json` for each run folder, and no other file of it |
 
 Why the gate: its word allowlist, its caps (three names a week, twelve starts an hour), its 60 s poll
 floor, its `--login never` and its output format are already reviewed and tested in the server repository,

@@ -93,6 +93,13 @@ export function targetOf(p: SiteProfile, account: string): Target {
 /** what every ssh of ours says, whatever the student's own ssh config says: the pinned key only, no forwarding */
 function common(r: Route, t: Target): string[] {
   return [
+    // both measured from Windows by the VS Code edition against the grid (its sshConfig.ts, 2026-09-28): the
+    // grid's sshd settles only on hmac-sha1, which Windows' OpenSSH 9.5 no longer offers unless asked ("no
+    // matching MAC found"), and the IPv6 attempt timed out before every IPv4 connection (13 s against 2 s).
+    // "+" adds to the client's own list and changes nothing where the server has better; a site reachable
+    // only over IPv6 would need a profile field first
+    '-o', 'MACs=+hmac-sha1',
+    '-o', 'AddressFamily=inet',
     '-o', `UserKnownHostsFile=${r.knownHosts}`,
     '-o', 'StrictHostKeyChecking=yes',
     '-o', 'CheckHostIP=no',
@@ -138,7 +145,9 @@ export function controlArgv(r: Route, t: Target, op: 'check' | 'exit'): string[]
 }
 
 export function keyscanArgv(r: Route, t: Target): string[] {
-  return [...r.keyscan, '-T', '10', '-p', String(t.port), t.host];
+  // -4 for the reason AddressFamily is inet above. ssh-keyscan takes no MACs option, so whether Windows' own
+  // ssh-keyscan agrees a MAC with the grid is not yet measured (LAPTOP_CHECKS.md, check 5)
+  return [...r.keyscan, '-4', '-T', '10', '-p', String(t.port), t.host];
 }
 
 // ---- running ---------------------------------------------------------------------------------------

@@ -13,7 +13,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { labMissing, startLab, type Lab } from './lab.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const TOOL_NAMES = ['grid_sign_in', 'grid_sign_out', 'grid_check', 'worker_status', 'worker_start', 'worker_stop', 'worker_log', 'workspace_list', 'workspace_read', 'open_in_claude'];
+const TOOL_NAMES = ['grid_sign_in', 'grid_sign_out', 'grid_check', 'worker_status', 'worker_list', 'worker_start', 'worker_stop', 'worker_log', 'workspace_list', 'workspace_read', 'open_in_claude'];
 
 let built = '';
 function build(): string {
@@ -45,7 +45,7 @@ afterAll(() => {
 });
 
 describe('the built server, through the MCP SDK client', () => {
-  it('lists the ten tools with honest hints, and asks for the account before anything else', async () => {
+  it('lists the eleven tools with honest hints, and asks for the account before anything else', async () => {
     const { client, stderr } = await connect({ PATH: process.env.PATH ?? '', HOME: mkdtempSync(join(tmpdir(), 'bd-home-')), BEETHOVEN_DESKTOP_ACCOUNT: '${user_config.grid_account}' });
     try {
       expect(client.getServerVersion()).toMatchObject({ name: 'beethoven-desktop', version: '1.0.0' });
@@ -54,7 +54,7 @@ describe('the built server, through the MCP SDK client', () => {
       expect(tools.map((t) => t.name).sort()).toEqual([...TOOL_NAMES].sort());
       const by = Object.fromEntries(tools.map((t) => [t.name, t]));
       expect(by['worker_stop']!.annotations).toMatchObject({ destructiveHint: true });
-      for (const n of ['grid_check', 'worker_status', 'worker_log', 'workspace_list', 'workspace_read']) expect(by[n]!.annotations?.readOnlyHint, n).toBe(true);
+      for (const n of ['grid_check', 'worker_status', 'worker_list', 'worker_log', 'workspace_list', 'workspace_read']) expect(by[n]!.annotations?.readOnlyHint, n).toBe(true);
       // no tool takes anything that could be a secret
       for (const t of tools) for (const k of Object.keys((t.inputSchema.properties ?? {}) as object)) expect(k).toMatch(/^(?:name|path|max_bytes|lines|permission_mode|keep_running)$/);
       const r = await client.callTool({ name: 'grid_check', arguments: {} });

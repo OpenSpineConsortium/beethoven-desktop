@@ -10,9 +10,10 @@ import {
 import { McpServer, SUPPORTED_VERSIONS, type Tool } from '../src/mcp.js';
 import { loadProfile, profileFrom, ProfileError, stateDirFor } from '../src/profile.js';
 import { redact, redactCredentials } from '../src/redact.js';
-import { callArgv, childEnv, classify, controlArgv, fingerprintOf, hostPattern, pinnedLines, routeFor, sftpArgv, signInArgv, wslPath } from '../src/ssh.js';
+import { rowOf } from '../src/runs.js';
+import { callArgv, childEnv, classify, controlArgv, fingerprintOf, hostPattern, keyscanArgv, pinnedLines, routeFor, sftpArgv, signInArgv, wslPath } from '../src/ssh.js';
 import { cmdQuote, launcherText, openerArgv, shQuote, terminalArgv } from '../src/terminal.js';
-import { describeStatus } from '../src/tools.js';
+import { describeStatus, describeWorkers } from '../src/tools.js';
 import { refusedName, segmentsOf } from '../src/workspace.js';
 import { PRODUCT_NAME, TRADEMARK, VERSION } from '../src/version.js';
 
@@ -131,6 +132,16 @@ describe('ssh', () => {
     expect(signInArgv(r, T)).not.toContain('BatchMode=yes');
     expect(sftpArgv(r, T).slice(-3)).toEqual(['-s', 'grid.wayne.edu', 'sftp']);
     expect(controlArgv(r, T, 'check')).toEqual(['ssh', '-o', 'ControlPath=/Users/a b/.beethoven-desktop/cm-%C', '-O', 'check', '-p', '22', '-l', 'ab1234', 'grid.wayne.edu']);
+  });
+
+  it("what the VS Code edition measured from Windows: hmac-sha1 added, IPv4 only, in every ssh and the scan", () => {
+    for (const r of [routeFor({ useWsl: false, sshPath: '' }, 'darwin', '/Users/a'), routeFor({ useWsl: false, sshPath: '' }, 'win32', 'C:\\Users\\ab'), routeFor({ useWsl: true, sshPath: '' }, 'win32', 'C:\\Users\\ab')]) {
+      for (const a of [callArgv(r, T, 'X'), signInArgv(r, T), sftpArgv(r, T)]) {
+        const opts = a.filter((_, i) => a[i - 1] === '-o');
+        expect(opts).toEqual(expect.arrayContaining(['MACs=+hmac-sha1', 'AddressFamily=inet']));
+      }
+      expect(keyscanArgv(r, T)).toContain('-4');
+    }
   });
 
   it('Windows: its own ssh keeps no sign-in; WSL\'s does, with the socket in WSL\'s home', () => {
@@ -274,5 +285,42 @@ describe('the posture check', () => {
     const r = spawnSync(process.execPath, ['scripts/forbidden.mjs', 'src'], { encoding: 'utf8' });
     expect(r.stderr).toBe('');
     expect(r.status).toBe(0);
+  });
+});
+
+describe('every worker of the account', () => {
+  const T0 = Date.parse('2026-10-04T03:00:00Z');
+
+  it('a row takes only what it shows, as short plain text, and a link only of Claude Code\'s shape', () => {
+    const r = rowOf('lead', JSON.stringify({
+      state: 'online', node: 'asx15', job: '4050', next_job: '4051', online_at: '2026-10-04T02:00:00Z',
+      environment_url: 'https://claude.ai/code?environment=env_01Abc', token_path: '/x/job.token',
+      claude_login: { loggedIn: true, email: 'a@example.edu', subscriptionType: 'max' },
+    }));
+    expect(r).toMatchObject({ name: 'lead', state: 'online', node: 'asx15', job: '4050', next_job: '4051', claude_account: 'a@example.edu', claude_plan: 'max', claude_signed_in: true, link: 'https://claude.ai/code?environment=env_01Abc' });
+    expect(Object.keys(r)).not.toContain('token_path');
+    expect(rowOf('x', JSON.stringify({ state: 'online\nInjected', environment_url: 'https://evil.example/code?environment=env_x' }))).toMatchObject({ state: 'online Injected', link: null });
+    expect(rowOf('x', '{"state":')).toMatchObject({ state: 'unreadable', link: null });
+    expect(rowOf('x', null)).toMatchObject({ state: 'unreadable' });
+  });
+
+  it('says which Claude account runs what, and counts only the live ones', () => {
+    const rows = [
+      rowOf('a1', JSON.stringify({ state: 'online', node: 'n1', claude_login: { loggedIn: true, email: 'a@example.edu', subscriptionType: 'max' } })),
+      rowOf('a2', JSON.stringify({ state: 'queued', claude_login: { loggedIn: true, email: 'a@example.edu' } })),
+      rowOf('b1', JSON.stringify({ state: 'online', claude_login: { loggedIn: true, email: 'b@example.edu' } })),
+      rowOf('old', JSON.stringify({ state: 'stopped', claude_login: { loggedIn: true, email: 'c@example.edu' } })),
+      rowOf('new', JSON.stringify({ state: 'need_login', claude_login: { loggedIn: false } })),
+    ];
+    const d = describeWorkers(rows, false, T0, false, 'Wayne State grid');
+    expect(d.text).toContain('5 workers under this grid account on the Wayne State grid:');
+    expect(d.text).toContain('- "a1": online, on n1, Claude account a@example.edu (max).');
+    expect(d.text).toContain('- "new": need_login, not signed in to Claude.');
+    expect(d.text).toContain('Running under: a@example.edu (2), b@example.edu (1).');
+    expect(d.text).not.toContain('c@example.edu (');
+    const quiet = describeWorkers([rowOf('q', JSON.stringify({ state: 'online', updated_at: '2026-10-04T02:48:00Z' })), rowOf('ok', JSON.stringify({ state: 'online', updated_at: '2026-10-04T02:59:40Z' }))], false, T0, false, 'g');
+    expect(quiet.text).toContain('- "q": online, but it has not written its status for 12 minutes');
+    expect(quiet.text).toContain('- "ok": online.');
+    expect(describeWorkers([], false, T0, false, 'Wayne State grid').text).toBe('No worker has been started under this grid account on the Wayne State grid yet.');
   });
 });
