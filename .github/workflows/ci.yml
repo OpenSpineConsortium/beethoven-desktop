@@ -3,8 +3,9 @@ name: ci
 # 127.0.0.1 with the gate stand-in (test/lab.ts), the built server through the MCP SDK client, the
 # .mcpb packed and validated, and the Claude Code plugin validated; on macOS and Windows the parts that
 # need no sshd (the launcher text, the routes, the protocol). No secrets: nothing here can reach a grid,
-# claude.ai or any account. The real hpcworker gate test needs a checkout of the private server
-# repository (HPCWORKER_DIR), which this workflow cannot clone without a token, so it runs locally.
+# claude.ai or any account. The real hpcworker gate test needs hpcworker's `framework` and `testbed`
+# exports, which interface/pull.sh fetches through a person's own gh sign-in and this workflow cannot
+# without a token, so it runs locally.
 on:
   push:
     branches: [main]
