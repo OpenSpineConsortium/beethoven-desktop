@@ -1,0 +1,13 @@
+{
+ "vector": "connect-failed-restricted",
+ "kind": "command",
+ "summary": "The workspace is marked restricted",
+ "command": "hpcworker connect --profile testsite --consent <install id>",
+ "exit": 4,
+ "stdout": [
+  "HPCW-STEP setup ready",
+  "HPCW-STEP consent",
+  "HPCW-STEP failed restricted the workspace /scratch/home/state/workspaces/worker is marked restricted"
+ ],
+ "stderr": []
+}

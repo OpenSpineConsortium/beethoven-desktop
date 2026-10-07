@@ -1,0 +1,11 @@
+{
+ "vector": "gate-refused",
+ "kind": "command",
+ "summary": "Any line the gate does not accept, rc.log among them",
+ "command": "SSH_ORIGINAL_COMMAND='read worker rc.log' hpcworker gate",
+ "exit": 126,
+ "stdout": [
+  "HPCW-GATE refused"
+ ],
+ "stderr": []
+}

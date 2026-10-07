@@ -64,8 +64,9 @@ claude --plugin-dir dist/beethoven   # try it as a Claude Code plugin
 ```
 
 The ssh tests need OpenSSH's `sshd` (on Ubuntu, `openssh-server`); without it they skip and say so.
-With `HPCWORKER_DIR` pointing at a checkout of `OpenSpineConsortium/hpcworker`, one more test runs the
-real `hpcworker gate` behind that sshd.
+Where hpcworker's pinned `framework` and `testbed` exports are fetched (`bash interface/pull.sh --pinned
+test/hpcworker-testbed test/hpcworker-framework`, through your own `gh` sign-in), one more block runs
+the real `hpcworker gate` behind that sshd (`interface/README.md`, "The real-gate lane").
 
 Settings (Claude Desktop: Settings, Extensions, Beethoven; Claude Code: the plugin's options): the grid
 account name (not a password), the site (`wayne`), the worker name (`worker`), and on Windows whether

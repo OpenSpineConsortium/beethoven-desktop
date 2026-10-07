@@ -1,0 +1,106 @@
+{
+ "format": 1,
+ "title": "The lines hpcworker prints for a program to read",
+ "description": "Each family is a line protocol: a line is matched whole, after the reader strips terminal codes, drops a carriage return and trims; a glued keepalive is removed before matching (docs/V11_CONTRACT.md sections 5.3 to 5.5, 9, 11 and 8.3; docs/V12_CONTRACT.md 'The key' and 'The gate'). Patterns use only what JavaScript and Python regular expressions share. A line that matches none of a family's patterns is text for a person, never an event. vectors/ holds what the real writer printed.",
+ "families": {
+  "step": {
+   "written_by": "hpcworker connect, and the gate's connect",
+   "stream": "stdout",
+   "lines": [
+    {"id": "setup", "pattern": "^HPCW-STEP setup (ready|changed)$", "groups": ["how"]},
+    {"id": "consent", "pattern": "^HPCW-STEP consent$"},
+    {"id": "queued", "pattern": "^HPCW-STEP queued ([0-9]+) (new|kept)(?: (.+))?$", "groups": ["job", "how", "run_dir"]},
+    {"id": "signin", "pattern": "^HPCW-STEP signin$"},
+    {"id": "signed-in", "pattern": "^HPCW-STEP signed-in (\\S+) (\\S+)$", "groups": ["email", "plan"], "note": "\"-\" for a field Claude Code did not give"},
+    {"id": "done", "pattern": "^HPCW-STEP done$"},
+    {"id": "failed", "pattern": "^HPCW-STEP failed ([a-z-]+)(?: (.*))?$", "groups": ["code", "sentence"]}
+   ],
+   "order": ["setup", "consent", "queued", "signin", "signed-in", "done"],
+   "rules": ["each step line at most once, in this order", "nothing follows a failed line", "the exit status is 0 after done, else the failure code's"],
+   "failure_codes": {"other": 1, "usage": 2, "setup": 3, "restricted": 4, "refused": 5, "signin-node": 6, "signin-code": 7, "signin-timeout": 7, "signin-billed": 7, "signin-method": 7, "signin": 7},
+   "unknown_code_reads_as": "other"
+  },
+  "login": {
+   "written_by": "the sign-in sitting (connect's, and `hpcworker claude login --plain`)",
+   "stream": "stdout",
+   "lines": [
+    {"id": "requesting", "pattern": "^HPCW-LOGIN: requesting a compute node$"},
+    {"id": "on-node", "pattern": "^HPCW-LOGIN: on (\\S+); checking whether you are signed in already$", "groups": ["host"]},
+    {"id": "starting", "pattern": "^HPCW-LOGIN: starting Claude Code's sign-in; waiting for the sign-in link$"},
+    {"id": "menu", "pattern": "^HPCW-LOGIN: (a menu appeared; chose the first entry|the menu is still up; pressed Enter again)$", "groups": ["text"]},
+    {"id": "auth-url", "pattern": "^AUTH-URL: (\\S+)$", "groups": ["url"], "note": "opened only when it is a Claude subscription's sign-in page on claude.ai or claude.com over https, never platform.claude.com"},
+    {"id": "code-prompt", "pattern": "^HPCW-LOGIN: paste the code from that page$"},
+    {"id": "code-received", "pattern": "^HPCW-LOGIN: code received, checking$"},
+    {"id": "code-refused", "pattern": "^HPCW-LOGIN: that code was not accepted; paste it again$"},
+    {"id": "keepalive", "pattern": "^HPCW-LOGIN: still waiting$", "note": "at least every 20 s from HPCW-STEP signin; remove it wherever it appears inside a line"},
+    {"id": "signed-in", "pattern": "^SIGNED-IN (\\S+) (\\S+)$", "groups": ["email", "plan"]},
+    {"id": "failed", "pattern": "^HPCW-LOGIN-FAILED: (.*)$", "groups": ["sentence"]},
+    {"id": "other", "pattern": "^HPCW-LOGIN: (.+)$", "groups": ["text"], "note": "any other progress line: words for a person"}
+   ],
+   "keepalive": "HPCW-LOGIN: still waiting"
+  },
+  "progress": {
+   "written_by": "worker start, the job and worker status, one line per event in <state_dir>/<name>/progress.log",
+   "stream": "file progress.log",
+   "line_pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z) (.+)$",
+   "sentences": [
+    {"id": "asked", "text": "Asked the grid for a computer"},
+    {"id": "got-computer", "text": "Got a computer"},
+    {"id": "connecting", "text": "Connecting to Claude"},
+    {"id": "online", "text": "Online", "argument": "the environment link, after \": \""},
+    {"id": "waiting-signin", "text": "Waiting for your Claude sign-in"},
+    {"id": "reconnecting", "text": "Reconnecting"},
+    {"id": "renewing", "text": "Renewing"},
+    {"id": "ended", "text": "Ended"},
+    {"id": "stopped", "text": "Stopped"},
+    {"id": "signin-abandoned", "text": "Stopped: waiting for your Claude sign-in timed out"},
+    {"id": "error", "text": "Couldn't start", "argument": "the job's message, after \": \""}
+   ],
+   "rules": ["the longest sentence that matches wins", "a sentence with an argument is followed by \": \" and the argument", "any other line is for Details only"]
+  },
+  "gate": {
+   "written_by": "hpcworker gate, the forced command of the browser key's line",
+   "stream": "stdout, but missing, not-plain and too-large on stderr",
+   "lines": [
+    {"id": "ok", "pattern": "^HPCW-GATE ok (\\S+) ([0-9]{4}-[0-9]{2}-[0-9]{2}|never|-) (\\S+) claude=(yes|no|unknown)$", "groups": ["framework", "due", "account", "claude"], "note": "due: the day the browser key's oldest line expires (YYYY-MM-DD, UTC), never when the site sets no expiry, - when it does and no line of ours is there"},
+    {"id": "refused", "pattern": "^HPCW-GATE refused$", "exit": 126},
+    {"id": "limit", "pattern": "^HPCW-GATE limit (names|hourly|watch|busy)$", "groups": ["which"], "exit": 123},
+    {"id": "missing", "pattern": "^HPCW-GATE missing$", "exit": 1},
+    {"id": "not-plain", "pattern": "^HPCW-GATE not-plain$", "exit": 3},
+    {"id": "too-large", "pattern": "^HPCW-GATE too-large$", "exit": 3}
+   ],
+   "rules": ["read a gate line by its prefix (HPCW- or {\"v\":1): a ~/.bashrc may print first"]
+  },
+  "key": {
+   "written_by": "hpcworker browser-key and the gate's forget",
+   "stream": "stdout",
+   "lines": [
+    {"id": "added", "pattern": "^HPCW-KEY added (SHA256:\\S+)$", "groups": ["fingerprint"]},
+    {"id": "removed", "pattern": "^HPCW-KEY removed$"},
+    {"id": "none", "pattern": "^HPCW-KEY none$"},
+    {"id": "forgotten", "pattern": "^HPCW-KEY forgotten$"},
+    {"id": "stuck", "pattern": "^HPCW-KEY stuck$", "exit": 7},
+    {"id": "expired", "pattern": "^HPCW-KEY expired$", "exit": 125},
+    {"id": "refused", "pattern": "^HPCW-KEY refused ([a-z-]+) (.*)$", "groups": ["code", "sentence"]},
+    {"id": "check", "pattern": "^HPCW-KEY check (ok|refused) (.*)$", "groups": ["verdict", "rest"]}
+   ]
+  },
+  "version": {
+   "written_by": "hpcworker version",
+   "stream": "stdout",
+   "lines": [
+    {"id": "version", "pattern": "^([0-9]+)(?: \\(shared copy at (.+)\\))?$", "groups": ["framework", "shared_install"]}
+   ]
+  },
+  "login-setup": {
+   "written_by": "hpcworker login-setup, typed by the student",
+   "stream": "stdout",
+   "rules": ["the last non-empty line says how it ended; only done is success"],
+   "lines": [
+    {"id": "done", "pattern": "^Done\\. The grid will not ask again\\.$"},
+    {"id": "removed", "pattern": "^Done\\. Removed Beethoven's grid key\\.$"},
+    {"id": "nothing", "pattern": "^Nothing to remove\\.$"}
+   ]
+  }
+ }
+}

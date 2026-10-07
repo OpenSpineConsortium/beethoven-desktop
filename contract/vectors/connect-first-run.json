@@ -1,0 +1,24 @@
+{
+ "vector": "connect-first-run",
+ "kind": "command",
+ "summary": "A first run: the account set up, the answer recorded, the worker queued, the sign-in sitting",
+ "command": "hpcworker connect --profile testsite --consent <install id>",
+ "stdin": "<the code pasted from Claude's page>",
+ "exit": 0,
+ "stdout": [
+  "HPCW-STEP setup changed",
+  "HPCW-STEP consent",
+  "HPCW-STEP queued 40501234 new /scratch/home/state/worker",
+  "HPCW-STEP signin",
+  "HPCW-LOGIN: requesting a compute node",
+  "HPCW-LOGIN: on node01; checking whether you are signed in already",
+  "HPCW-LOGIN: starting Claude Code's sign-in; waiting for the sign-in link",
+  "AUTH-URL: https://claude.ai/oauth/authorize?code=true",
+  "HPCW-LOGIN: paste the code from that page",
+  "HPCW-LOGIN: code received, checking",
+  "SIGNED-IN st1234@wayne.edu max",
+  "HPCW-STEP signed-in st1234@wayne.edu max",
+  "HPCW-STEP done"
+ ],
+ "stderr": []
+}

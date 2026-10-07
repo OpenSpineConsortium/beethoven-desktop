@@ -69,7 +69,10 @@ publisher.
   sign-in, the pinned host key), `sftp.ts` (a read-only SFTP v3 client), `workspace.ts` (the path rules),
   `terminal.ts` (the sign-in launcher, the terminal and the opener), `contract.ts` (mirrors the server
   repository's `docs/V11_CONTRACT.md` and `docs/V12_CONTRACT.md`), `redact.ts`, `profile.ts`, `config.ts`.
-- `profiles/`: site profiles vendored as data from `hpcworker` (`bash profiles/pull.sh`).
+- `profiles/`, `contract/`, `contract-text/`: hpcworker's exports `profiles`, `contract` and
+  `contract-text`, pinned with `ORIGIN` and taken only by `bash interface/pull.sh <folder>`
+  (`interface/README.md`); `test/hpcworker-testbed/` and `test/hpcworker-framework/` hold the two
+  program exports the real-gate lane runs, git-ignored but for their `ORIGIN`.
 - `bundle/`, `plugin/`: the two manifests, the icon and the plugin's skill.
 - `test/`: `unit.test.ts`; `lab.ts` (a real sshd of this account on 127.0.0.1 with the grid's
   algorithms) with `gate-standin.sh`; `grid.ssh.test.ts`; `mcp.e2e.test.ts` (the built server through
@@ -80,7 +83,8 @@ publisher.
 ```
 npm ci
 npm run typecheck && npm test              # the ssh tests need sshd (Ubuntu: openssh-server); Linux only
-HPCWORKER_DIR=../hpcworker npm test        # also the real hpcworker gate behind the same sshd
+bash interface/pull.sh --pinned test/hpcworker-testbed test/hpcworker-framework && npm test
+                                           # also the real hpcworker gate (its pinned framework) behind the same sshd
 npm run build                              # dist/beethoven/: the extension folder and the plugin folder in one
 npm run pack                               # dist/beethoven-<version>.mcpb, validated by @anthropic-ai/mcpb
 claude plugin validate dist/beethoven
@@ -88,8 +92,10 @@ claude plugin validate dist/beethoven
 
 CI (`.github/workflows/ci.yml`) holds no secret: the full suite on ubuntu with `BD_REQUIRE_LAB=1` (the
 ssh tests fail instead of skipping), the unit tests on macOS and Windows, the bundle and plugin
-validated and uploaded as an artifact. The real-gate test needs the private server repository, so it
-runs on a maintainer's machine or in a session that has both checkouts.
+validated and uploaded as an artifact. The real-gate test needs hpcworker's `framework` and `testbed`
+exports, which `interface/pull.sh` fetches through the person's own `gh` sign-in and CI holds none,
+so it runs on a maintainer's machine or in a session signed in to GitHub; never from a checkout of
+hpcworker.
 
 **The tests decide what lands, with no human step** (greg, 2026-10-04). `.githooks/pre-push` runs
 `npm run gate` (typecheck, forbidden, tests, the packed and validated bundle) and a red gate does not

@@ -1,0 +1,9 @@
+{
+ "vector": "progress-queued",
+ "kind": "file",
+ "summary": "progress.log after `worker start`",
+ "file": "progress.log",
+ "lines": [
+  "2026-10-01T12:00:00Z Asked the grid for a computer"
+ ]
+}

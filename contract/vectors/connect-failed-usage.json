@@ -1,0 +1,11 @@
+{
+ "vector": "connect-failed-usage",
+ "kind": "command",
+ "summary": "A flag connect does not take",
+ "command": "hpcworker connect --profile testsite --login fresh",
+ "exit": 2,
+ "stdout": [
+  "HPCW-STEP failed usage --login fresh is no longer offered: Beethoven never signs anyone out of Claude; to use another account, sign out of Claude Code yourself on a compute node, then sign in again"
+ ],
+ "stderr": []
+}

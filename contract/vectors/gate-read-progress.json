@@ -1,0 +1,11 @@
+{
+ "vector": "gate-read-progress",
+ "kind": "command",
+ "summary": "The gate's read of progress.log",
+ "command": "SSH_ORIGINAL_COMMAND='read worker progress.log' hpcworker gate",
+ "exit": 0,
+ "stdout": [
+  "2026-10-01T12:00:00Z Asked the grid for a computer"
+ ],
+ "stderr": []
+}

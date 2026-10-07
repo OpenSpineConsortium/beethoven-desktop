@@ -5,8 +5,8 @@
 // answer is given again with the time it was read. Nothing here deletes anything, anywhere.
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import {
-  gateRefusal, gateRemoteLine, linkOf, parseGateVersion, parseStatusJson, parseStepLine, progressLines, stoppedLine,
-  WORKER_NAME_RE, type GateLine, type GateVersion, type PermissionMode, type StatusJson, type Step,
+  GATE_READ_EXIT, gateReadFailure, gateRefusal, gateRemoteLine, linkOf, parseGateVersion, parseStatusJson, parseStepLine, progressLines,
+  stoppedLine, WORKER_NAME_RE, type GateLine, type GateVersion, type PermissionMode, type StatusJson, type Step,
 } from './contract.js';
 import type { Config } from './config.js';
 import { stateDirFor, type SiteProfile } from './profile.js';
@@ -253,7 +253,8 @@ export class Grid {
     const r = await this.gate({ verb: 'stop', name: nm.name }, 120_000);
     if (!r.ok) return r;
     this.statusCache.delete(nm.name);
-    const line = stoppedLine(r.out);
+    // V11 §7.1's test of success: exit 0 and the line
+    const line = r.res.code === 0 ? stoppedLine(r.out) : null;
     if (!line) {
       if (/no worker named/.test(r.res.stderr)) return { ok: false, message: `There is no worker named "${nm.name}".` };
       return { ok: false, message: "The grid didn't confirm the stop." };
@@ -279,8 +280,12 @@ export class Grid {
     const all = await this.floored<{ name: string; all: string[] }>(`log:${nm.name}`, async () => {
       const r = await this.gate({ verb: 'read', name: nm.name, file: 'progress.log' }, 60_000);
       if (!r.ok) return r;
-      if (r.res.code === 1 && /HPCW-GATE missing/.test(r.res.stderr)) return { ok: false, message: `The worker "${nm.name}" has no progress log yet.` };
-      if (r.res.code === 3) return { ok: false, message: "The worker's progress log isn't a plain file, so Beethoven didn't read it." };
+      const why = gateReadFailure(r.res.stderr);
+      if (why && r.res.code === GATE_READ_EXIT[why]) {
+        if (why === 'missing') return { ok: false, message: `The worker "${nm.name}" has no progress log yet.` };
+        if (why === 'not-plain') return { ok: false, message: "The worker's progress log isn't a plain file, so Beethoven didn't read it." };
+        return { ok: false, message: "The worker's progress log is larger than the grid hands over, so Beethoven didn't read it." };
+      }
       return { ok: true, name: nm.name, all: progressLines(redact(r.out)) };
     });
     if (!all.ok) return all;

@@ -23,11 +23,9 @@ import { PRODUCT_NAME, TRADEMARK, VERSION } from '../src/version.js';
 
 const wayne = loadProfile('wayne');
 const T = { host: 'grid.wayne.edu', port: 22, account: 'ab1234' };
-// each would put Claude Code on a key, a token, a gateway or a cloud provider instead of the subscription
-const KEY_ROUTES = [
-  'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_BASE_URL', 'CLAUDE_CODE_OAUTH_TOKEN', 'CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR',
-  'CLAUDE_CODE_API_KEY_FILE_DESCRIPTOR', 'CLAUDE_CODE_USE_BEDROCK', 'CLAUDE_CODE_USE_VERTEX', 'CLAUDE_CODE_USE_FOUNDRY',
-];
+// each would put Claude Code on a key, a token, a gateway or a cloud provider instead of the subscription:
+// hpcworker's list, from its pinned `contract` export
+const KEY_ROUTES = (JSON.parse(readFileSync(new URL('../contract/rules.json', import.meta.url), 'utf8')) as { credential_variables: string[] }).credential_variables;
 
 describe('the gate lines', () => {
   it('builds exactly the verbs this edition sends, and nothing from a bad value', () => {
@@ -71,12 +69,12 @@ describe('the gate lines', () => {
     expect(parseStepLine('HPCW-STEP failed restricted')).toEqual({ kind: 'failed', code: 'restricted', sentence: '' });
     // step_fail prints "<code> <sentence>" even when the sentence is empty
     expect(parseStepLine('HPCW-STEP failed restricted ')).toEqual({ kind: 'failed', code: 'restricted', sentence: '' });
-    // every code connect prints on hpcworker's main (framework 17: step_fail's first word, and die's "other"),
-    // written out here rather than taken from FAIL_CODES, so the list is checked and not only repeated
-    const printed = ['usage', 'setup', 'restricted', 'refused', 'signin-node', 'signin-code', 'signin-timeout', 'signin-billed', 'signin-method', 'signin', 'other'];
-    for (const code of printed) expect(parseStepLine(`HPCW-STEP failed ${code} why`)).toEqual({ kind: 'failed', code, sentence: 'why' });
-    expect([...FAIL_CODES].sort()).toEqual([...printed].sort());
-    expect(parseStepLine(' HPCW-STEP done')).toBeNull();
+    // every code connect prints is held to the pinned contract in test/contract.test.ts
+    for (const code of FAIL_CODES) expect(parseStepLine(`HPCW-STEP failed ${code} why`)).toEqual({ kind: 'failed', code, sentence: 'why' });
+    // a line is read with its terminal codes stripped, its carriage return dropped and trimmed, and then whole
+    expect(parseStepLine(' \x1b[0mHPCW-STEP done\r')).toEqual({ kind: 'done' });
+    expect(parseStepLine('echo HPCW-STEP done')).toBeNull();
+    expect(parseStepLine('HPCW-STEP failed Restricted why')).toBeNull();
     expect(progressLines('bashrc\n2026-10-04T01:00:00Z Asked the grid for a computer\nnope\n')).toEqual(['2026-10-04T01:00:00Z Asked the grid for a computer']);
   });
 

@@ -1,0 +1,17 @@
+{
+ "vector": "connect-failed-signin-node",
+ "kind": "command",
+ "summary": "No computer for the sign-in in time",
+ "command": "hpcworker connect --profile testsite --login always",
+ "exit": 6,
+ "stdout": [
+  "HPCW-STEP setup changed",
+  "HPCW-STEP queued 40501234 new /scratch/home/state/worker",
+  "HPCW-STEP signin",
+  "HPCW-LOGIN: requesting a compute node",
+  "srun: error: Unable to allocate resources: Job not run since it would not start within the requested time",
+  "HPCW-LOGIN-FAILED: the cluster did not give a compute node in time, or the session ended early; try again in a minute",
+  "HPCW-STEP failed signin-node the cluster did not give a compute node for the sign-in in time, or the session ended early"
+ ],
+ "stderr": []
+}

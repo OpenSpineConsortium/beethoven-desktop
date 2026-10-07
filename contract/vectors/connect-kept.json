@@ -1,0 +1,13 @@
+{
+ "vector": "connect-kept",
+ "kind": "command",
+ "summary": "A job already in line is kept and nothing is submitted",
+ "command": "hpcworker connect --profile testsite --login never",
+ "exit": 0,
+ "stdout": [
+  "HPCW-STEP setup ready",
+  "HPCW-STEP queued 40500019 kept /scratch/home/state/worker",
+  "HPCW-STEP done"
+ ],
+ "stderr": []
+}

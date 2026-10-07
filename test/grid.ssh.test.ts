@@ -1,9 +1,10 @@
 // The server's grid side against a real sshd of this account on 127.0.0.1 (test/lab.ts): the pinned host
 // key, the sign-in in a "terminal" that outlives its window, each gate verb over the kept sign-in, the
 // floors, the workspace over sshd's own sftp-server with a worker that plants links and credentials, and
-// the sign-out. By default the shared copy is the gate stand-in; with HPCWORKER_DIR the last block runs
-// the real framework's gate behind the same sshd. The clock is the test's: floors are crossed by moving
-// it, never by waiting.
+// the sign-out. By default the shared copy is the gate stand-in; where a person fetched hpcworker's pinned
+// `framework` and `testbed` exports (bash interface/pull.sh --pinned test/hpcworker-testbed
+// test/hpcworker-framework), the last block runs the real framework's gate behind the same sshd. The
+// clock is the test's: floors are crossed by moving it, never by waiting.
 import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -11,9 +12,14 @@ import type { Config } from '../src/config.js';
 import { Grid, realDeps, type Deps } from '../src/grid.js';
 import { loadProfile, profileFrom } from '../src/profile.js';
 import { launch } from '../src/terminal.js';
-import { labMissing, startLab, type Lab } from './lab.js';
+import { parseStepLine } from '../src/contract.js';
+import { labMissing, realGateMissing, startLab, type Lab } from './lab.js';
+import { importOf, ROOT } from './origin.js';
 
 const missing = labMissing();
+// the lane is opt-in: it runs where the pinned programs were fetched, and says why when it does not
+const realMissing = missing ?? realGateMissing();
+const skipped = (title: string, why: string | null) => (why ? `${title} (skipped: ${why})` : title);
 
 interface Rig {
   grid: Grid;
@@ -54,7 +60,7 @@ function commandSessions(lab: Lab): number {
   return (readFileSync(lab.sshdLog, 'utf8').match(/Starting session: command for /g) ?? []).length;
 }
 
-describe.skipIf(missing)('the grid over a real sshd (gate stand-in)', () => {
+describe.skipIf(missing)(skipped('the grid over a real sshd (gate stand-in)', missing), () => {
   let lab: Lab;
   let r: Rig;
 
@@ -289,7 +295,7 @@ describe.skipIf(missing)('the grid over a real sshd (gate stand-in)', () => {
   });
 });
 
-describe.skipIf(missing || !process.env.HPCWORKER_DIR)('the real hpcworker gate behind the same sshd', () => {
+describe.skipIf(realMissing)(skipped('the real hpcworker gate behind the same sshd', realMissing), () => {
   let lab: Lab;
   let r: Rig;
 
@@ -304,16 +310,18 @@ describe.skipIf(missing || !process.env.HPCWORKER_DIR)('the real hpcworker gate 
     lab?.stop();
   });
 
-  it('version', async () => {
+  it('version: the pinned framework answers', async () => {
     const v = await r.grid.version();
-    expect(v).toMatchObject({ ok: true, v: { account: lab.account } });
-    expect(v.ok && v.v.framework).toMatch(/^\d+$/);
+    const pinned = readFileSync(join(ROOT, importOf('test/hpcworker-framework').into, 'VERSION'), 'utf8').trim();
+    expect(v).toMatchObject({ ok: true, v: { account: lab.account, framework: pinned } });
   });
 
   it('connect through the gate, then status, log and stop', async () => {
     const s = await r.grid.start(undefined, undefined, false);
     expect(s.ok, !s.ok ? s.message : '').toBe(true);
-    expect(s.ok && s.steps.some((x) => x.kind === 'done' || x.kind === 'queued')).toBe(true);
+    // the steps the contract's gate-connect vector printed, and never a sign-in
+    const vector = JSON.parse(readFileSync(join(ROOT, 'contract', 'vectors', 'gate-connect.json'), 'utf8')) as { stdout: string[] };
+    expect(s.ok && s.steps.map((x) => x.kind)).toEqual(vector.stdout.map((l) => parseStepLine(l)?.kind));
     expect(s.ok && s.steps.some((x) => x.kind === 'signin')).toBe(false);
     const st = await r.grid.status();
     expect(st).toMatchObject({ ok: true, s: { run: 'worker', status: { state: 'queued' } } });

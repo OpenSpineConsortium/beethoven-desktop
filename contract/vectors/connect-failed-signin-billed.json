@@ -1,0 +1,18 @@
+{
+ "vector": "connect-failed-signin-billed",
+ "kind": "command",
+ "summary": "Claude Code offered a sign-in that bills by use; nothing was opened",
+ "command": "hpcworker connect --profile testsite --login always",
+ "exit": 7,
+ "stdout": [
+  "HPCW-STEP setup changed",
+  "HPCW-STEP queued 40501234 new /scratch/home/state/worker",
+  "HPCW-STEP signin",
+  "HPCW-LOGIN: requesting a compute node",
+  "HPCW-LOGIN: on node01; checking whether you are signed in already",
+  "HPCW-LOGIN: starting Claude Code's sign-in; waiting for the sign-in link",
+  "HPCW-LOGIN-FAILED: Claude Code offered a sign-in that bills by use instead of your Claude subscription, and Beethoven signs in only with a Claude subscription; start the sign-in again, and if it repeats ask your lead",
+  "HPCW-STEP failed signin-billed Claude Code offered a sign-in that bills by use instead of your Claude subscription, and Beethoven signs in only with a Claude subscription; start the sign-in again, and if it repeats ask your lead"
+ ],
+ "stderr": []
+}

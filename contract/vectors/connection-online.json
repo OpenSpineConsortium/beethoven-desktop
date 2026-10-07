@@ -1,0 +1,26 @@
+{
+ "vector": "connection-online",
+ "kind": "file",
+ "summary": "connection.json as the job writes it at registration",
+ "file": "connection.json",
+ "json": {
+  "session_name": "asx10-hazy-meadow",
+  "requested_name": "Wayne State grid",
+  "session_url": "https://claude.ai/code?environment=env_01XzAN32jsbL8W1PAFSvitBt",
+  "environment_url": "https://claude.ai/code?environment=env_01XzAN32jsbL8W1PAFSvitBt",
+  "environment_id": "env_01XzAN32jsbL8W1PAFSvitBt",
+  "node": "node01",
+  "job": "4242",
+  "pid": 4242,
+  "started_at": "2026-10-01T12:00:00Z",
+  "token_path": "/scratch/state/worker/job.token",
+  "workspace": "/scratch/state/workspaces/worker",
+  "rc_log": "/scratch/state/worker/rc.log",
+  "permission_mode": "default",
+  "capacity": "4",
+  "resumed": false,
+  "next_job": "40501234",
+  "title": "Wayne State grid",
+  "online_at": "2026-10-01T12:00:00Z"
+ }
+}

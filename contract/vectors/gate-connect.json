@@ -1,0 +1,13 @@
+{
+ "vector": "gate-connect",
+ "kind": "command",
+ "summary": "The gate's connect: the step lines, never a sign-in",
+ "command": "SSH_ORIGINAL_COMMAND='connect worker testsite - default chain' hpcworker gate",
+ "exit": 0,
+ "stdout": [
+  "HPCW-STEP setup ready",
+  "HPCW-STEP queued 40501234 new /scratch/state/worker",
+  "HPCW-STEP done"
+ ],
+ "stderr": []
+}

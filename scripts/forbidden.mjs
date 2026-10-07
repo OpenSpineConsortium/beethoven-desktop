@@ -4,7 +4,8 @@
 //
 //   node scripts/forbidden.mjs [DIR]        (default: src; the build runs it on dist/beethoven/server)
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { basename, join, relative } from 'node:path';
+import { basename, dirname, join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const dir = process.argv[2] ?? 'src';
 const files = [];
@@ -33,18 +34,33 @@ const STRIP_SITES = [
   [['redact.js', 'redact.ts'], /^\[\/(?:\\.|\[(?:\\.|[^\]\\])*\]|[^\/\\[])+\/[a-z]*, '[^']*\[redacted\][^']*'\],$/],
 ];
 
+// Every variable that would put Claude Code on a key, a token, a gateway or a cloud provider instead of the
+// subscription: the list hpcworker strips (its `contract` export's rules.json, pinned in contract/), read
+// from the pinned copy so a new pull refuses a new name here without a second list to keep.
+const RULES_JSON = join(dirname(fileURLToPath(import.meta.url)), '..', 'contract', 'rules.json');
+let CREDENTIAL_VARIABLES;
+try {
+  CREDENTIAL_VARIABLES = JSON.parse(readFileSync(RULES_JSON, 'utf8')).credential_variables;
+} catch {
+  CREDENTIAL_VARIABLES = null;
+}
+if (!Array.isArray(CREDENTIAL_VARIABLES) || CREDENTIAL_VARIABLES.length === 0 || !CREDENTIAL_VARIABLES.every((n) => /^[A-Z][A-Z0-9_]*$/.test(n))) {
+  console.error(`forbidden: ${relative('.', RULES_JSON)} gives no list of credential variables`);
+  process.exit(1);
+}
+
 const RULES = [
   [/\bfetch\s*\(/, 'a network request (fetch)'],
   [/\bXMLHttpRequest\b|\bWebSocket\b|\bEventSource\b/, 'a network client'],
   [/\beval\s*\(|\bnew\s+Function\s*\(/, 'code from text'],
   [/(?<![.\w])exec(?:Sync)?\s*\(|\bexecFile(?:Sync)?\b|\bfork\s*\(|shell:\s*true/, 'a shell (spawn with shell: false only)'],
   [/\bsshpass\b|\bexpect\s+-|PasswordAuthentication|SSH_ASKPASS|KbdInteractive/i, 'a password handed to ssh'],
-  [/setup-token|CLAUDE_CODE_OAUTH_TOKEN|auth logout/, 'a Claude credential or sign-out', STRIP_SITES],
+  [/setup-token|auth logout/, 'a Claude credential or sign-out', STRIP_SITES],
   // no API key anywhere (greg, 2026-10-04 13:27Z): a key, a token, a gateway, a cloud provider, the
   // Console's sign-in or its pages would each put Claude Code on something other than the subscription
   [
-    /ANTHROPIC_(?:API_KEY|AUTH_TOKEN|BASE_URL)|CLAUDE_CODE_(?:API_KEY_FILE_DESCRIPTOR|USE_(?:BEDROCK|VERTEX|FOUNDRY))|apiKeyHelper|console\.anthropic\.com|platform\.claude\.com|sk-ant-|--console\b/i,
-    'an API key, a gateway or a cloud provider for Claude Code',
+    new RegExp(`${CREDENTIAL_VARIABLES.join('|')}|apiKeyHelper|console\\.anthropic\\.com|platform\\.claude\\.com|sk-ant-|--console\\b`, 'i'),
+    'a Claude credential, an API key, a gateway or a cloud provider for Claude Code',
     STRIP_SITES,
   ],
   [/~\/\.claude\b|\.beethoven\/claude|\.ashley\/claude|claude_config_dir/, "the Claude sign-in's folder"],

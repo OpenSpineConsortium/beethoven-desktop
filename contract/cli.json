@@ -1,0 +1,38 @@
+{
+ "format": 1,
+ "title": "What a client may ask hpcworker",
+ "description": "The command lines another program types to the lab's shared copy (docs/V11_CONTRACT.md section 4) and the lines the gate accepts as its forced command (docs/V12_CONTRACT.md 'The gate'). Everything else hpcworker takes is for people at a terminal and may change in any release. <tool> is <shared_install>/bin/hpcworker, <shared_install> the site profile's value. A value is checked against its pattern before it is placed; a client never quotes around a bad value. Outputs are read through lines.json and the schemas.",
+ "values": {
+  "name": {"pattern": "^[A-Za-z0-9_-]{1,32}$", "default": "worker"},
+  "gate_name": {"pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$"},
+  "site": {"pattern": "^[a-z0-9][a-z0-9-]{0,31}$"},
+  "install_id": {"pattern": "^[0-9a-f]{32}$"},
+  "login": {"enum": ["auto", "always", "never"], "note": "fresh is refused: HPCW-STEP failed usage, exit 2"},
+  "permission_mode": {"enum": ["default", "acceptEdits", "plan"]},
+  "gate_file": {"enum": ["status.json", "connection.json", "progress.log", "node"]}
+ },
+ "commands": [
+  {"id": "connect", "line": "exec bash '<tool>' connect --name '<name>' --profile '<site>' [--consent '<install_id>'] --login '<login>' --permission-mode '<permission_mode>' [--no-chain]", "reads": "lines.json step and login families", "stdin": "the pasted code, once, after the code-prompt line"},
+  {"id": "worker-status", "line": "bash '<tool>' worker status --name '<name>' --json", "reads": "worker-status.schema.json", "exit": {"0": "one JSON line", "1": "no such worker (stderr)"}},
+  {"id": "worker-stop", "line": "bash '<tool>' worker stop --name '<name>'", "reads": "status.json afterwards"},
+  {"id": "worker-restrict", "line": "bash '<tool>' worker restrict --name '<name>'"},
+  {"id": "consent-record", "line": "bash '<tool>' claude consent --record '<install_id>'"},
+  {"id": "install-shared", "line": "bash '<tool>' install --shared '<shared_install>' --profile '<site>'"},
+  {"id": "login-setup", "line": "bash <tool> login-setup", "reads": "lines.json login-setup family", "note": "typed by the student in their own terminal, never by a client's own shell"},
+  {"id": "version", "line": "bash '<tool>' version", "reads": "lines.json version family"}
+ ],
+ "gate": {
+  "description": "SSH_ORIGINAL_COMMAND, exactly one of these lines; anything else: HPCW-GATE refused, exit 126",
+  "verbs": [
+   {"id": "version", "line": "version", "reads": "lines.json gate ok"},
+   {"id": "status", "line": "status <gate_name>", "reads": "worker-status.schema.json"},
+   {"id": "watch", "line": "watch <gate_name>", "reads": "worker-status.schema.json, one line per event", "exit": {"0": "online", "1": "stopped, error or ended", "2": "out of time (30 minutes)"}},
+   {"id": "connect", "line": "connect <gate_name> <site> <install_id|-> <permission_mode> <chain|no-chain>", "reads": "lines.json step family; never signin (the gate runs --login never)"},
+   {"id": "stop", "line": "stop <gate_name>"},
+   {"id": "restrict", "line": "restrict <gate_name>"},
+   {"id": "read", "line": "read <gate_name> <gate_file>", "reads": "the file's bytes; progress.log's last 256 KB", "exit": {"1": "HPCW-GATE missing", "3": "HPCW-GATE not-plain or too-large"}},
+   {"id": "forget", "line": "forget", "reads": "lines.json key family: forgotten, none or stuck"}
+  ],
+  "limits": {"names": 3, "connects_per_hour": 12, "watches_at_once": 2, "exit": 123}
+ }
+}
