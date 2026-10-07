@@ -1,0 +1,75 @@
+{
+ "$defs": {
+  "AccountRecord": {
+   "additionalProperties": false,
+   "description": "One account as stored. Labels, paths and the engine's own bookkeeping; nothing from inside\nany sign-in directory.",
+   "properties": {
+    "label": {
+     "pattern": "^[a-z0-9][a-z0-9-]{0,31}$",
+     "title": "Label",
+     "type": "string"
+    },
+    "path": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "title": "Path"
+    },
+    "enabled": {
+     "default": true,
+     "title": "Enabled",
+     "type": "boolean"
+    },
+    "order": {
+     "minimum": 0,
+     "title": "Order",
+     "type": "integer"
+    },
+    "hibernate_until": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Hibernate Until"
+    }
+   },
+   "required": [
+    "label",
+    "path",
+    "order"
+   ],
+   "title": "AccountRecord",
+   "type": "object"
+  }
+ },
+ "additionalProperties": false,
+ "description": "``accounts.json``: version 1.",
+ "properties": {
+  "version": {
+   "const": 1,
+   "default": 1,
+   "title": "Version",
+   "type": "integer"
+  },
+  "accounts": {
+   "default": [],
+   "items": {
+    "$ref": "#/$defs/AccountRecord"
+   },
+   "title": "Accounts",
+   "type": "array"
+  }
+ },
+ "title": "RegistryFile",
+ "type": "object"
+}

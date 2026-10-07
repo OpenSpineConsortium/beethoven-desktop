@@ -70,9 +70,11 @@ publisher.
   `terminal.ts` (the sign-in launcher, the terminal and the opener), `contract.ts` (mirrors the server
   repository's `docs/V11_CONTRACT.md` and `docs/V12_CONTRACT.md`), `redact.ts`, `profile.ts`, `config.ts`.
 - `profiles/`, `contract/`, `contract-text/`: hpcworker's exports `profiles`, `contract` and
-  `contract-text`, pinned with `ORIGIN` and taken only by `bash interface/pull.sh <folder>`
-  (`interface/README.md`); `test/hpcworker-testbed/` and `test/hpcworker-framework/` hold the two
-  program exports the real-gate lane runs, git-ignored but for their `ORIGIN`.
+  `contract-text`, and `registry/`: beethoven-agents' export `registry` (bee's two account files as
+  JSON Schema, which `test/registry.test.ts` holds `src/accounts.ts` to), each pinned with `ORIGIN`
+  and taken only by `bash interface/pull.sh <folder>` (`interface/README.md`);
+  `test/hpcworker-testbed/` and `test/hpcworker-framework/` hold the two program exports the
+  real-gate lane runs, git-ignored but for their `ORIGIN`.
 - `bundle/`, `plugin/`: the two manifests, the icon and the plugin's skill.
 - `test/`: `unit.test.ts`; `lab.ts` (a real sshd of this account on 127.0.0.1 with the grid's
   algorithms) with `gate-standin.sh`; `grid.ssh.test.ts`; `mcp.e2e.test.ts` (the built server through

@@ -1,6 +1,8 @@
-// The student's own Claude accounts on this computer, as the engine's account switcher (`bee`, in the
-// engine repository, src/beethoven_research/bee/) keeps them: <registry>/accounts.json and
-// <registry>/usage/<label>.json, and no other file; each must be a plain file, never a link. A list holds
+// The student's own Claude accounts on this computer, as the engine's account switcher (`bee`, in
+// beethoven-agents) keeps them: <registry>/accounts.json and <registry>/usage/<label>.json, and no other
+// file; each must be a plain file, never a link. beethoven-agents publishes both files as JSON Schema
+// (its export `registry`, pinned in registry/), and test/registry.test.ts holds the names, pattern and
+// bounds typed below to them, so neither side moves without the other noticing. A list holds
 // labels, the folder each account signs in to, on or off, a resting time and the last usage reading the
 // account's status line saw; it holds nothing from inside a sign-in folder, and this module never opens,
 // lists or checks one, so the view cannot reach a credential. It only reads: bee writes the list, and the
@@ -12,7 +14,7 @@ import { join, resolve } from 'node:path';
 const MAX_LIST = 64 * 1024;
 const MAX_USAGE = 4 * 1024;
 const LABEL_RE = /^[a-z0-9][a-z0-9-]{0,31}$/;
-// accounts.json's own fields (bee's RegistryFile and AccountRecord forbid any other)
+// accounts.json's own fields (registry/accounts.schema.json's AccountRecord forbids any other)
 const RECORD_KEYS = ['label', 'path', 'enabled', 'order', 'hibernate_until'];
 // the form bee's utc_text writes, and the offsets Python's fromisoformat also takes in that form
 const ISO_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|([+-])(\d{2}):(\d{2}))$/;

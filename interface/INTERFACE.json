@@ -40,6 +40,13 @@
    "version": 1,
    "into": "test/hpcworker-framework",
    "origin": "test/hpcworker-framework/ORIGIN"
+  },
+  {
+   "repository": "OpenSpineConsortium/beethoven-agents",
+   "export": "registry",
+   "version": 1,
+   "into": "registry",
+   "origin": "registry/ORIGIN"
   }
  ]
 }

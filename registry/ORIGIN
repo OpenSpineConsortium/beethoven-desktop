@@ -1,0 +1,5 @@
+repository OpenSpineConsortium/beethoven-agents
+commit 671e758e561cd460092d23f9934ab1731098077b
+export registry 1
+sha256 40fe4cb90f7962f0fc82a3111f1ada3dea0623f72b2b4f0f42391a4b364ce77a accounts.schema.json
+sha256 bb612dced2e0719c1f3e87e214d8ca681ea41bed202ecca647250acfa355f49d usage.schema.json
