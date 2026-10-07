@@ -1,0 +1,18 @@
+{
+ "vector": "connect-failed-signin-timeout",
+ "kind": "command",
+ "summary": "No code arrived in time",
+ "command": "hpcworker connect --profile testsite --login always",
+ "exit": 7,
+ "stdout": [
+  "HPCW-STEP setup changed",
+  "HPCW-STEP queued 40501234 new /scratch/home/state/worker",
+  "HPCW-STEP signin",
+  "HPCW-LOGIN: requesting a compute node",
+  "HPCW-LOGIN: on node01; checking whether you are signed in already",
+  "HPCW-LOGIN: starting Claude Code's sign-in; waiting for the sign-in link",
+  "HPCW-LOGIN-FAILED: no code arrived within 10 minutes; start the sign-in again",
+  "HPCW-STEP failed signin-timeout no code arrived within 10 minutes; start the sign-in again"
+ ],
+ "stderr": []
+}

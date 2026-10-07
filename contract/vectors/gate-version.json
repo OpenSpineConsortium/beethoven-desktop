@@ -1,0 +1,11 @@
+{
+ "vector": "gate-version",
+ "kind": "command",
+ "summary": "The gate's version line; the account is this machine's, shown as st1234",
+ "command": "SSH_ORIGINAL_COMMAND='version' hpcworker gate",
+ "exit": 0,
+ "stdout": [
+  "HPCW-GATE ok 17 never st1234 claude=unknown"
+ ],
+ "stderr": []
+}

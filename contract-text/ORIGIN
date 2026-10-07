@@ -1,0 +1,5 @@
+repository OpenSpineConsortium/hpcworker
+commit ee08fa125370b3dc6f7e46922c75772073cdd6d6
+export contract-text 1
+sha256 238b014fc0b24ae80ace1fb72c92b7317eda8752e3d403513aeebf96e286cea7 V11_CONTRACT.md
+sha256 800574395cddf474dc371ff8ac853ab885d2297c168e12dfe0235ce764eb2dc8 V12_CONTRACT.md

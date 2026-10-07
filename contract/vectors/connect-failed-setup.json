@@ -1,0 +1,11 @@
+{
+ "vector": "connect-failed-setup",
+ "kind": "command",
+ "summary": "The lab's copy cannot be used from this account",
+ "command": "hpcworker connect --profile testsite --login never",
+ "exit": 3,
+ "stdout": [
+  "HPCW-STEP failed setup the shared copy at /nonexistent/beethoven/hpcworker/current cannot be used from this account: this account cannot open it (it does not exist, or this account is not in the group that may read it). Nothing was changed."
+ ],
+ "stderr": []
+}

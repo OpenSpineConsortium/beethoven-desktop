@@ -1,0 +1,11 @@
+{
+ "vector": "version-shared",
+ "kind": "command",
+ "summary": "`hpcworker version` from an account that runs the lab's shared copy",
+ "command": "hpcworker version",
+ "exit": 0,
+ "stdout": [
+  "17 (shared copy at /scratch/shared/current)"
+ ],
+ "stderr": []
+}

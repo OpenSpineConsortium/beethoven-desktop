@@ -1,21 +1,24 @@
 // A grid of our own for the ssh tests: OpenSSH's sshd run by this account on 127.0.0.1 with the grid's
 // algorithms (an RSA host key, aes-ctr, hmac-sha1), the sessions' HOME a test folder (sshd's SetEnv), and
-// the lab's shared copy of hpcworker at <lab>/shared/current: either the gate stand-in of this folder, or,
-// with HPCWORKER_DIR, the real framework from a checkout of OpenSpineConsortium/hpcworker behind the fake
-// scheduler of its own tests (fakegrid.py). Nothing here reaches a real grid; every file is under one
-// temporary folder, removed at the end. The ssh our server runs is a wrapper that reads only the lab's
-// own ssh config: a key that is NOT authorized, so a call without the kept sign-in is refused, as a
-// password account's would be; the sign-in itself (the "terminal") uses the authorized session key.
+// the lab's shared copy of hpcworker at <lab>/shared/current: either the gate stand-in of this folder, or
+// hpcworker's `framework` export behind its `testbed` (the fake scheduler), both pinned in this repository
+// with ORIGIN, fetched by interface/pull.sh, and checked against ORIGIN before either runs. Nothing here
+// reaches a real grid; every file is under one temporary folder, removed at the end. The ssh our server
+// runs is a wrapper that reads only the lab's own ssh config: a key that is NOT authorized, so a call
+// without the kept sign-in is refused, as a password account's would be; the sign-in itself (the
+// "terminal") uses the authorized session key.
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir, userInfo } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fingerprintOf } from '../src/ssh.js';
+import { FETCH_COMMAND, FETCHED, fetched, importOf, importProblems } from './origin.js';
 
 const HERE = fileURLToPath(new URL('.', import.meta.url));
 const ROOT = join(HERE, '..');
+const [TESTBED, FRAMEWORK] = FETCHED.map((f) => importOf(f)) as [ReturnType<typeof importOf>, ReturnType<typeof importOf>];
 
 function which(name: string): string | null {
   const r = spawnSync('sh', ['-c', `command -v ${name}`], { encoding: 'utf8' });
@@ -78,6 +81,23 @@ function labMissingWhy(): string | null {
   return null;
 }
 
+/** what the pinned programs lack, in words; throws when they are there and are not what ORIGIN records */
+function realProblems(): string[] {
+  return [TESTBED, FRAMEWORK].flatMap((imp) => importProblems(imp, ROOT));
+}
+
+/**
+ * why the real-gate lane cannot run here, or null when it can. It is opt-in: it runs only where a person
+ * fetched hpcworker's `testbed` and `framework` exports into the folders git ignores (FETCH_COMMAND), and
+ * a fetch that is not what ORIGIN records fails it rather than skipping it
+ */
+export function realGateMissing(): string | null {
+  if (!fetched(TESTBED) && !fetched(FRAMEWORK)) return `hpcworker's framework and testbed are not fetched (${FETCH_COMMAND})`;
+  const p = realProblems();
+  if (p.length) throw new Error(`the pinned programs are not what their ORIGIN records, so nothing of them runs:\n${p.join('\n')}`);
+  return labMissingWhy();
+}
+
 export async function startLab(opts: { gate?: 'standin' | 'real'; bashrc?: string } = {}): Promise<Lab> {
   const gate = opts.gate ?? 'standin';
   const sshd = findSshd()!;
@@ -101,12 +121,15 @@ export async function startLab(opts: { gate?: 'standin' | 'real'; bashrc?: strin
   let version = '1';
   const extraEnv: string[] = [];
   if (gate === 'real') {
-    const fw = join(process.env.HPCWORKER_DIR!, 'framework');
+    // checked again here, right before anything of them is copied or run
+    const p = realProblems();
+    if (p.length) throw new Error(`the pinned programs are not what their ORIGIN records:\n${p.join('\n')}`);
+    const fw = join(ROOT, FRAMEWORK.into);
     version = readFileSync(join(fw, 'VERSION'), 'utf8').trim();
     const v = join(E, 'shared', `v${version}`);
     mkdirSync(v, { recursive: true });
+    // the copy as tools/deploy_shared.sh publishes it: the export is exactly those files
     for (const p of ['bin', 'lib', 'jobs', 'profiles', 'VERSION', 'README.md']) cpSync(join(fw, p), join(v, p), { recursive: true });
-    rmSync(join(v, 'lib', '__pycache__'), { recursive: true, force: true });
     // as the server repository's own e2e test does: this copy refuses any HOME but the lab's
     const src = readFileSync(join(fw, 'bin', 'hpcworker'), 'utf8').split('\n');
     const guard = `case "$HOME" in ${E}/home) ;; *) echo "E2E-GUARD refused HOME=$HOME" >&2; touch ${E}/GUARD-FIRED; exit 99;; esac`;
@@ -114,16 +137,13 @@ export async function startLab(opts: { gate?: 'standin' | 'real'; bashrc?: strin
     const wayne = JSON.parse(readFileSync(join(v, 'profiles', 'wayne.json'), 'utf8'));
     Object.assign(wayne, { site, shared_install: `${E}/shared/current`, shared_state_dir: `${E}/state`, binds: [], claude_config_dir: '$HOME/cfg', consent_markers: [] });
     writeFileSync(join(v, 'profiles', `${site}.json`), JSON.stringify(wayne, null, 1));
-    const py = spawnSync('python3', ['-c', [
-      'import os, sys',
-      `sys.path.insert(0, ${JSON.stringify(join(fw, 'tests'))})`,
-      'import fakegrid as G',
-      `d = ${JSON.stringify(join(E, 'fakebin'))}`,
-      'for n, t in (("sbatch", G.FAKE_SBATCH), ("squeue", G.FAKE_SQUEUE), ("scancel", G.FAKE_SCANCEL), ("scontrol", G.FAKE_SCONTROL), ("srun", G.FAKE_SRUN)):',
-      '    open(os.path.join(d, n), "w").write(t); os.chmod(os.path.join(d, n), 0o755)',
-    ].join('\n')], { encoding: 'utf8' });
-    if (py.status !== 0) throw new Error(`fakegrid: ${py.stderr}`);
-    extraEnv.push(`FAKE_SCHED_DIR=${E}/sched`, `HPCW_HOME=${E}/home/.hpcworker`, `HPCW_PYTHON=${which('python3')}`, 'HPCW_STOP_WAIT_S=2', 'HPCW_STOP_POLL_S=1');
+    // the testbed's scheduler first on the sessions' PATH, run as programs: each keeps its state in FAKE_SCHED_DIR
+    const bin = join(ROOT, TESTBED.into, 'fakebin');
+    for (const n of readdirSync(bin)) {
+      cpSync(join(bin, n), join(E, 'fakebin', n));
+      chmodSync(join(E, 'fakebin', n), 0o755);
+    }
+    extraEnv.push(`FAKE_SCHED_DIR=${E}/sched`);
   } else {
     mkdirSync(join(E, 'shared', 'v1', 'bin'), { recursive: true });
     cpSync(join(HERE, 'gate-standin.sh'), join(E, 'shared', 'v1', 'bin', 'hpcworker'));

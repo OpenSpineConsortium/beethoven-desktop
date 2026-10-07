@@ -6,13 +6,12 @@
 // framework/tests/test_boundary.py's, ported; no network and no secret.
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { FETCHED, importProblems, manifest, ROOT, type Import } from './origin.js';
 
-const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const SELF = 'beethoven-desktop';
 const THIS = 'test/boundary.test.ts';
 const STANDARD = 'https://github.com/OpenSpineConsortium/beethoven/blob/main/INTERFACES.md';
@@ -39,22 +38,10 @@ const NOT_FROM_REGISTRY = /^(?:file:|link:|portal:|git[+:]|github:|gitlab:|bitbu
 
 // [file, what matched, why it is still here and who removes it]
 const KNOWN: [string, string, string][] = [
-  ['test/lab.ts', 'HPCWORKER_DIR',
-    'the opt-in real-gate lab copies framework/{bin,lib,jobs,profiles,VERSION,README.md} from a sibling hpcworker checkout; '
-    + "Wave B takes hpcworker's `framework` program export instead, pinned with ORIGIN in a folder git ignores (interface/README.md), "
-    + "and this repository's Wave B change removes the entry, after hpcworker's interface is merged"],
-  ['test/lab.ts', 'fakegrid',
-    "the same lab imports hpcworker's test-internal framework/tests/fakegrid.py from that checkout for its fake scheduler; "
-    + "Wave B takes hpcworker's `testbed` program export instead and removes the entry with the one above"],
-  ['test/grid.ssh.test.ts', 'HPCWORKER_DIR', 'the real-gate block runs only when HPCWORKER_DIR is set; it goes with the lab\'s entry in Wave B'],
-  ['test/gate-standin.sh', 'HPCWORKER_DIR', 'a comment naming the real-gate lane; it goes with that lane in Wave B'],
   ['.github/workflows/ci.yml', 'HPCWORKER_DIR',
-    'a comment saying CI cannot run the real-gate lane; a session cannot push a workflow file here, so the maintainer rewords it '
-    + 'when Wave B lands'],
-  ['.githooks/pre-push', 'HPCWORKER_DIR inherited',
-    "the hook runs `npm run gate` in the pusher's environment, so a set HPCWORKER_DIR makes the push's verdict depend on a sibling "
-    + "checkout's working tree; the hook's behaviour stays as it is in Wave A, and the entry goes stale when Wave B ends the "
-    + 'variable in the tests'],
+    'a comment saying CI cannot run the real-gate lane because it needs a checkout of hpcworker (HPCWORKER_DIR); the lane now takes '
+    + "hpcworker's pinned `testbed` and `framework` exports, which CI cannot fetch without a token either, so only the comment's "
+    + 'reason is out of date; a session cannot push a workflow file here, so the maintainer rewords it and removes this entry'],
 ];
 
 /** the repository's files: git's list where git is at hand, else the tree without .git, node_modules and dist */
@@ -70,8 +57,11 @@ function tracked(): string[] {
     for (const n of readdirSync(d)) {
       if (['.git', 'node_modules', 'dist'].includes(n)) continue;
       const p = join(d, n);
+      const rel = relative(ROOT, p).split(sep).join('/');
+      // a fetched import's files are git's to ignore: only its ORIGIN is the repository's
+      if (FETCHED.some((f) => rel.startsWith(`${f}/`) && rel !== `${f}/ORIGIN`)) continue;
       if (statSync(p).isDirectory()) walk(p);
-      else found.push(relative(ROOT, p).split(sep).join('/'));
+      else found.push(rel);
     }
   };
   walk(ROOT);
@@ -118,69 +108,6 @@ function covered(rel: string, paths: string[]): boolean {
     const re = new RegExp(`^${p.split('*').map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[^/]*')}$`);
     return re.test(rel);
   });
-}
-
-interface Import {
-  repository: string;
-  export: string;
-  version: number;
-  into: string;
-  origin: string;
-}
-
-interface Manifest {
-  format: number;
-  name: string;
-  repository: string;
-  summary: string;
-  standard: string;
-  exports: { id: string; kind: string; version: number; summary: string; paths: string[]; consumers: string[] }[];
-  imports: Import[];
-}
-
-function manifest(root = ROOT): Manifest {
-  return JSON.parse(readFileSync(join(root, 'interface', 'INTERFACE.json'), 'utf8')) as Manifest;
-}
-
-const sha256 = (p: string) => createHash('sha256').update(readFileSync(p)).digest('hex');
-
-/** what is wrong with one import's folder against its ORIGIN, in words; empty when it is the pinned copy */
-function importProblems(imp: Import, root = ROOT): string[] {
-  const out: string[] = [];
-  const folder = join(root, imp.into);
-  const originPath = join(root, imp.origin);
-  if (!existsSync(originPath)) return [`${imp.origin} is missing`];
-  const lines = readFileSync(originPath, 'utf8').split('\n').filter(Boolean);
-  if (lines[0] !== `repository ${imp.repository}`) out.push(`${imp.origin}'s first line is not "repository ${imp.repository}"`);
-  if (!/^commit [0-9a-f]{40}$/.test(lines[1] ?? '')) out.push(`${imp.origin}'s second line is not a commit`);
-  const recorded = new Map<string, string>();
-  for (const l of lines.slice(2)) {
-    let m: RegExpExecArray | null;
-    // a copy taken before its provider published INTERFACE.json has no export line; the next pull writes one
-    if ((m = /^export (\S+) (\S+)$/.exec(l))) {
-      if (m[1] !== imp.export || m[2] !== String(imp.version)) out.push(`${imp.origin} records export ${m[1]} ${m[2]}, the import is ${imp.export} ${imp.version}`);
-    } else if ((m = /^sha256 ([0-9a-f]{64}) (\S(?:.*\S)?)$/.exec(l))) {
-      recorded.set(m[2]!, m[1]!);
-    } else {
-      out.push(`${imp.origin} has a line the standard does not know: ${l}`);
-    }
-  }
-  const present = new Map<string, string>();
-  const walk = (d: string) => {
-    for (const n of readdirSync(d)) {
-      const p = join(d, n);
-      if (statSync(p).isDirectory()) walk(p);
-      else present.set(relative(folder, p).split(sep).join('/'), sha256(p));
-    }
-  };
-  if (existsSync(folder)) walk(folder);
-  for (const own of ['ORIGIN', 'README.md', 'pull.sh']) present.delete(own);
-  for (const [f, h] of present) {
-    if (!recorded.has(f)) out.push(`${imp.into}/${f} is not in ${imp.origin} (a pull lists a file the provider dropped for a person to remove)`);
-    else if (recorded.get(f) !== h) out.push(`${imp.into}/${f} differs from ${imp.origin}: take a new copy with its pull.sh, never edit one by hand`);
-  }
-  for (const f of recorded.keys()) if (!present.has(f)) out.push(`${imp.into}/${f} is in ${imp.origin} but not in the folder`);
-  return out;
 }
 
 const all = tracked();
@@ -282,13 +209,35 @@ describe('rule 2: what this repository offers and takes, declared in one place',
 });
 
 describe('rule 3: an import is a pinned, checked copy', () => {
-  it('each import folder holds exactly what its ORIGIN lists, byte for byte', () => {
+  const git = (...args: string[]) => {
+    const env = { ...process.env };
+    for (const k of ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_PREFIX', 'GIT_COMMON_DIR', 'GIT_OBJECT_DIRECTORY']) delete env[k];
+    return spawnSync('git', ['-C', ROOT, ...args], { env, encoding: 'utf8' });
+  };
+  const gitAtHand = git('rev-parse', '--is-inside-work-tree').status === 0;
+
+  it('each import folder holds exactly what its ORIGIN lists, byte for byte (a fetched one, when it was fetched)', () => {
     const m = manifest();
     expect(m.imports.length).toBeGreaterThan(0);
-    for (const imp of m.imports) expect(importProblems(imp), imp.into).toEqual([]);
+    for (const imp of m.imports) expect(importProblems(imp, ROOT, { absentOk: FETCHED.includes(imp.into) }), imp.into).toEqual([]);
+    for (const f of FETCHED) expect(m.imports.map((i) => i.into), f).toContain(f);
   });
 
-  it('the check refuses an edited file, a file ORIGIN does not list, and another export', () => {
+  it.skipIf(!gitAtHand)('a committed import is committed whole; a fetched one commits its ORIGIN alone and git ignores the rest', () => {
+    for (const imp of manifest().imports) {
+      const inside = all.filter((f) => f.startsWith(`${imp.into}/`));
+      if (FETCHED.includes(imp.into)) {
+        expect(inside, imp.into).toEqual([imp.origin]);
+        expect(git('check-ignore', '-q', `${imp.into}/bin/x`).status, `${imp.into} is not ignored by git`).toBe(0);
+        expect(git('check-ignore', '-q', imp.origin).status, `${imp.origin} is ignored by git`).toBe(1);
+      } else {
+        const listed = readFileSync(join(ROOT, imp.origin), 'utf8').split('\n').filter((l) => l.startsWith('sha256 ')).map((l) => `${imp.into}/${l.split(' ').slice(2).join(' ')}`);
+        for (const f of listed) expect(inside, `${f} is in ${imp.origin} but git does not track it`).toContain(f);
+      }
+    }
+  });
+
+  it('the check refuses an edited file, a file ORIGIN does not list, another export, and half a fetch', () => {
     // a check that passes everything proves nothing: each of these is named
     const imp = manifest().imports[0]!;
     const T = mkdtempSync(join(tmpdir(), 'bd-boundary-'));
@@ -303,56 +252,113 @@ describe('rule 3: an import is a pinned, checked copy', () => {
       expect(p).toMatch(new RegExp(`${first.replace('.', '\\.')} differs`));
       expect(p).toMatch(/extra\.json is not in/);
       expect(p).toMatch(/records export/);
+
+      // a fetched import: nothing fetched passes, half a fetch does not, and a README.md its ORIGIN records is one of its files
+      const sha = (t: string) => createHash('sha256').update(t).digest('hex');
+      const f: Import = { repository: 'OpenSpineConsortium/hpcworker', export: 'framework', version: 1, into: 'fw', origin: 'fw/ORIGIN' };
+      mkdirSync(join(T, 'fw', 'bin'), { recursive: true });
+      writeFileSync(join(T, 'fw', 'ORIGIN'), `repository ${f.repository}\ncommit ${'a'.repeat(40)}\nexport framework 1\nsha256 ${sha('read me\n')} README.md\nsha256 ${sha('#!/bin/bash\n')} bin/hpcworker\n`);
+      expect(importProblems(f, T, { absentOk: true })).toEqual([]);
+      expect(importProblems(f, T).join('\n')).toMatch(/fw\/README\.md is in fw\/ORIGIN but not in the folder/);
+      writeFileSync(join(T, 'fw', 'bin', 'hpcworker'), '#!/bin/bash\n');
+      expect(importProblems(f, T, { absentOk: true }).join('\n')).toMatch(/fw\/README\.md is in fw\/ORIGIN but not in the folder/);
+      writeFileSync(join(T, 'fw', 'README.md'), 'read me, edited\n');
+      expect(importProblems(f, T, { absentOk: true }).join('\n')).toMatch(/fw\/README\.md differs/);
+      writeFileSync(join(T, 'fw', 'README.md'), 'read me\n');
+      expect(importProblems(f, T, { absentOk: true })).toEqual([]);
     } finally {
       rmSync(T, { recursive: true, force: true });
     }
   });
 
   const bash = spawnSync('bash', ['-c', 'exit 0']).status === 0 && spawnSync('node', ['-e', '0']).status === 0;
-  describe.skipIf(!bash)('profiles/pull.sh, its parts that need no network', () => {
-    const pull = join(ROOT, 'profiles', 'pull.sh');
+  describe.skipIf(!bash)('interface/pull.sh, its parts that need no network', () => {
+    const pull = join(ROOT, 'interface', 'pull.sh');
     // the script's functions, with nothing run: it runs main only when it is not sourced
     const fn = (name: string, args: string[], input?: string) =>
       spawnSync('bash', ['-c', 'source "$1"; shift; "$@"', '_', pull, name, ...args], { encoding: 'utf8', input });
 
-    it('refuses a word it does not know before it asks anything of GitHub', () => {
+    it('refuses a word it does not know, and a folder that is no import, before it asks anything of GitHub', () => {
       // a gh that only says it was asked stands first on the PATH: the network is never reached from here
       const T = mkdtempSync(join(tmpdir(), 'bd-pull-'));
       try {
         writeFileSync(join(T, 'gh'), '#!/bin/sh\necho asked >&2\nexit 99\n', { mode: 0o755 });
-        for (const args of [['--from', '../hpcworker'], ['--ref'], ['hpcworker']]) {
+        for (const args of [['--from', '../hpcworker'], ['--ref'], ['hpcworker'], ['../profiles'], [], ['--ref', 'main', '--pinned', 'profiles'], ['--all', 'profiles'], ['profiles', 'framework']]) {
           const r = spawnSync('bash', [pull, ...args], { encoding: 'utf8', env: { ...process.env, PATH: `${T}:${process.env.PATH ?? ''}` } });
           expect([r.status, r.stderr.includes('asked')], args.join(' ')).toEqual([2, false]);
         }
+        // the old name of the profiles' pull goes the same way
+        const r = spawnSync('bash', [join(ROOT, 'profiles', 'pull.sh'), '--from', 'x'], { encoding: 'utf8', env: { ...process.env, PATH: `${T}:${process.env.PATH ?? ''}` } });
+        expect([r.status, r.stderr.includes('asked')]).toEqual([2, false]);
       } finally {
         rmSync(T, { recursive: true, force: true });
       }
     });
 
-    it('places each file at its path below the folder the export\'s paths share', () => {
+    it('reads each import from interface/INTERFACE.json, and nothing that is not one', () => {
+      const m = readFileSync(join(ROOT, 'interface', 'INTERFACE.json'), 'utf8');
+      for (const imp of manifest().imports) {
+        expect(fn('import_of', [imp.into], m).stdout).toBe(`${imp.repository} ${imp.export} ${imp.version}\n`);
+      }
+      expect(fn('imports_all', [], m).stdout).toBe(manifest().imports.map((i) => `${i.into}\n`).join(''));
+      expect(fn('import_of', ['framework'], m).status).not.toBe(0);
+      const bad = JSON.stringify({ imports: [{ repository: 'someone/else', export: 'x', version: 1, into: 'x' }] });
+      expect(fn('import_of', ['x'], bad).status).not.toBe(0);
+      expect(fn('origin_commit', [], `repository a/b\ncommit ${'c'.repeat(40)}\nexport x 1\n`).stdout).toBe('c'.repeat(40));
+      expect(fn('origin_commit', [], 'repository a/b\n').status).not.toBe(0);
+    });
+
+    it('places each file at its path below the folder the export\'s paths share, never on the folder\'s own files', () => {
       expect(fn('shared_base', ['framework/profiles/*.json']).stdout).toBe('framework/profiles/');
       expect(fn('shared_base', ['interface/contract/']).stdout).toBe('interface/contract/');
+      expect(fn('shared_base', ['docs/V11_CONTRACT.md', 'docs/V12_CONTRACT.md']).stdout).toBe('docs/');
       expect(fn('shared_base', ['framework/bin/', 'framework/lib/', 'framework/VERSION']).stdout).toBe('framework/');
       expect(fn('placed', ['framework/profiles/', 'framework/profiles/wayne.json']).stdout).toBe('wayne.json');
+      expect(fn('placed', ['framework/', 'framework/README.md']).stdout).toBe('README.md');
       for (const [base, p] of [['framework/profiles/', 'framework/other.json'], ['framework/profiles/', 'framework/profiles/ORIGIN'], ['', '../x'], ['a/', 'a//b']]) {
         expect(fn('placed', [base!, p!]).status, `${base} ${p}`).not.toBe(0);
       }
       expect(fn('covered', ['framework/profiles/wayne.json', 'framework/profiles/*.json']).status).toBe(0);
       expect(fn('covered', ['framework/profiles/old/wayne.json', 'framework/profiles/*.json']).status).not.toBe(0);
       expect(fn('covered', ['framework/lib/profile.py', 'framework/profiles/*.json']).status).not.toBe(0);
+      // the folder's own README.md is never written over; one its ORIGIN records came with the export
+      const T = mkdtempSync(join(tmpdir(), 'bd-own-'));
+      try {
+        expect(fn('own_file', [T, 'README.md']).status).not.toBe(0);
+        writeFileSync(join(T, 'README.md'), 'ours\n');
+        writeFileSync(join(T, 'pull.sh'), 'ours\n');
+        expect(fn('own_file', [T, 'README.md']).status).toBe(0);
+        expect(fn('own_file', [T, 'pull.sh']).status).toBe(0);
+        expect(fn('own_file', [T, 'wayne.json']).status).not.toBe(0);
+        writeFileSync(join(T, 'ORIGIN'), `repository a/b\ncommit ${'c'.repeat(40)}\nsha256 ${'d'.repeat(64)} README.md\n`);
+        expect(fn('own_file', [T, 'README.md']).status).not.toBe(0);
+        expect(fn('own_file', [T, 'pull.sh']).status).toBe(0);
+      } finally {
+        rmSync(T, { recursive: true, force: true });
+      }
     });
 
-    it('takes the paths the provider\'s manifest lists for profiles version 1, and nothing else', () => {
-      const offer = (exports: unknown) => fn('export_paths', [], JSON.stringify({ format: 1, exports }));
-      const ok = offer([{ id: 'contract', version: 1, paths: ['interface/contract/'] }, { id: 'profiles', version: 1, paths: ['framework/profiles/*.json'] }]);
+    it('takes the paths the provider\'s manifest lists for the export at the version asked, and nothing else', () => {
+      const offer = (exports: unknown, id = 'profiles', want = '1') => fn('export_paths', [id, want], JSON.stringify({ format: 1, exports }));
+      const both = [{ id: 'contract', version: 1, paths: ['interface/contract/'] }, { id: 'profiles', version: 1, paths: ['framework/profiles/*.json'] }];
+      const ok = offer(both);
       expect([ok.status, ok.stdout]).toEqual([0, 'framework/profiles/*.json\n']);
+      expect(offer(both, 'contract').stdout).toBe('interface/contract/\n');
       const v2 = offer([{ id: 'profiles', version: 2, paths: ['framework/profiles/*.json'] }]);
       expect(v2.status).not.toBe(0);
       expect(v2.stderr).toMatch(/profiles version 1 is not offered \(offered: profiles 2\)/);
       expect(offer([]).status).not.toBe(0);
       expect(offer([{ id: 'profiles', version: 1, paths: ['../hpcworker/framework/profiles/*.json'] }]).status).not.toBe(0);
       expect(offer([{ id: 'profiles', version: 1, paths: ['/etc/*.json'] }]).status).not.toBe(0);
-      expect(fn('export_paths', [], 'not json').status).not.toBe(0);
+      expect(fn('export_paths', ['profiles', '1'], 'not json').status).not.toBe(0);
+    });
+
+    it('never unsets gh\'s own sign-in, and never runs another repository\'s code', () => {
+      // gh's ordinary sign-in includes GH_TOKEN and GITHUB_TOKEN (in a cloud session they are how it is
+      // signed in); the script reads neither, and nothing it fetches is run
+      const text = readFileSync(pull, 'utf8');
+      expect(text).not.toMatch(/env -u|unset\s+(?:GH_TOKEN|GITHUB_TOKEN)|\$\{?(?:GH_TOKEN|GITHUB_TOKEN)/);
+      expect(text).not.toMatch(/\bgit clone\b|\bcurl\b|\bsource\s+"\$dest|\bbash\s+"\$dest/);
     });
   });
 });

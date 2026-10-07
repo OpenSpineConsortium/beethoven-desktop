@@ -1,0 +1,11 @@
+{
+ "vector": "worker-status-queued",
+ "kind": "command",
+ "summary": "`worker status --json` while queued: one scheduler call, its answer in `scheduler`",
+ "command": "hpcworker worker status --name worker --json",
+ "exit": 0,
+ "stdout": [
+  "{\"v\":1,\"run\":\"worker\",\"job\":\"40501234\",\"next_job\":\"\",\"state_dir\":\"/scratch/home/state\",\"status\":{\"version\":17,\"site\":\"testsite\",\"run\":\"worker\",\"job\":\"40501234\",\"node\":\"\",\"state\":\"queued\",\"message\":\"waiting for a computer\",\"needs\":\"nothing\",\"hint\":\"Your worker is in line for a computer.\",\"submitted_at\":\"2026-10-01T12:00:00Z\",\"updated_at\":\"2026-10-01T12:00:00Z\",\"title\":\"Wayne State grid\",\"requested_name\":\"Wayne State grid\",\"renewal\":false,\"chain\":true,\"next_job\":\"\",\"consent\":false,\"consent_source\":\"none\",\"scheduler_state\":\"PENDING\",\"reason\":\"Priority\",\"expected_start\":\"\",\"checked_at\":\"2026-10-01T12:00:00Z\"},\"connection\":null,\"scheduler\":{\"state\":\"PENDING\",\"reason\":\"Priority\",\"expected_start\":\"\",\"node\":\"\",\"checked_at\":\"2026-10-01T12:00:00Z\"},\"line\":\"Your worker is in line for a computer (0 min so far).\"}"
+ ],
+ "stderr": []
+}

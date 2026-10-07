@@ -3,7 +3,9 @@
 # only, answering the verbs of the server repository's docs/V12_CONTRACT.md ("The gate") from a run
 # folder under $STANDIN_STATE (status.json, connection.json, progress.log as a test leaves them). It
 # refuses what the real gate refuses for the lines this edition sends; it is not the real gate, which
-# the test with HPCWORKER_DIR runs instead. Every line it is asked is appended to $STANDIN_STATE/calls.
+# the opt-in lane runs instead from hpcworker's pinned `framework` export, and test/contract.test.ts holds
+# what it prints to that repository's `contract` export. Every line it is asked is appended to
+# $STANDIN_STATE/calls.
 set -u
 [ "${1:-}" = gate ] && [ $# = 1 ] || { echo "HPCW-GATE refused"; exit 126; }
 c="${SSH_ORIGINAL_COMMAND-}"

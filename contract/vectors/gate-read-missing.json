@@ -1,0 +1,11 @@
+{
+ "vector": "gate-read-missing",
+ "kind": "command",
+ "summary": "The gate's read of a file the run does not have yet",
+ "command": "SSH_ORIGINAL_COMMAND='read worker node' hpcworker gate",
+ "exit": 1,
+ "stdout": [],
+ "stderr": [
+  "HPCW-GATE missing"
+ ]
+}

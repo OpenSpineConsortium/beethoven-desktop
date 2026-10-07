@@ -5,3 +5,9 @@ dist/
 *.pem
 .DS_Store
 Thumbs.db
+# hpcworker's program exports for the opt-in real-gate lane: fetched by interface/pull.sh into these
+# folders and checked against their ORIGIN, which alone is committed (interface/README.md)
+/test/hpcworker-testbed/*
+!/test/hpcworker-testbed/ORIGIN
+/test/hpcworker-framework/*
+!/test/hpcworker-framework/ORIGIN

@@ -1,0 +1,13 @@
+{
+ "vector": "connect-never",
+ "kind": "command",
+ "summary": "--login never: queued and done",
+ "command": "hpcworker connect --profile testsite --login never",
+ "exit": 0,
+ "stdout": [
+  "HPCW-STEP setup ready",
+  "HPCW-STEP queued 40501234 new /scratch/home/state/worker",
+  "HPCW-STEP done"
+ ],
+ "stderr": []
+}

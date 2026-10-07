@@ -1,0 +1,33 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "https://github.com/OpenSpineConsortium/hpcworker/interface/contract/connection.schema.json",
+ "title": "connection.json",
+ "description": "<state_dir>/<name>/connection.json, written by the job when Remote Control registers. docs/V11_CONTRACT.md section 10. A file whose job is neither the run's job nor its next_job is stale (R1).",
+ "type": "object",
+ "required": ["session_name", "requested_name", "session_url", "environment_url", "environment_id", "node", "job", "started_at", "title", "online_at"],
+ "properties": {
+  "session_name": {"type": "string", "description": "the name Claude Code chose at registration"},
+  "requested_name": {"type": "string"},
+  "session_url": {"$ref": "#/$defs/claude_link"},
+  "environment_url": {"$ref": "#/$defs/claude_link"},
+  "environment_id": {"type": "string", "pattern": "^(|env_[A-Za-z0-9_-]+)$"},
+  "node": {"type": "string"},
+  "job": {"type": "string", "pattern": "^[0-9]+$"},
+  "pid": {"type": "integer"},
+  "started_at": {"$ref": "#/$defs/time_or_empty"},
+  "token_path": {"type": "string"},
+  "workspace": {"type": "string"},
+  "rc_log": {"type": "string"},
+  "permission_mode": {"enum": ["default", "acceptEdits", "plan"]},
+  "capacity": {"type": "string", "pattern": "^[0-9]*$", "description": "a number written as a string"},
+  "resumed": {"type": "boolean"},
+  "next_job": {"type": "string", "pattern": "^[0-9]*$"},
+  "title": {"type": "string"},
+  "online_at": {"$ref": "#/$defs/time_or_empty"}
+ },
+ "additionalProperties": true,
+ "$defs": {
+  "time_or_empty": {"type": "string", "pattern": "^(|[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)$"},
+  "claude_link": {"type": "string", "pattern": "^https://claude\\.(ai|com)/code(\\?environment=env_|/session_)[A-Za-z0-9_-]+$"}
+ }
+}

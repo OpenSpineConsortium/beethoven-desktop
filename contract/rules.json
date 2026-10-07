@@ -1,0 +1,50 @@
+{
+ "format": 1,
+ "title": "The rules every Beethoven program that starts or judges Claude Code applies",
+ "description": "No API key anywhere (greg, 2026-10-04 13:27Z: the only fundamental rule of this software). hpcworker applies these in framework/jobs/worker.sbatch.tpl (CLEAN_ENV), framework/bin/hpcworker (clean_env_args) and framework/lib/adapters/common.sh (hpcw_agent_env, hpcw_claude_signin); test_interface.py fails when the code and this file differ. A program that starts Claude Code removes every name in credential_variables from its environment; a program that judges `claude auth status` counts as signed in only what subscription_signin says, and is tested against signin_cases.",
+ "credential_variables": [
+  "ANTHROPIC_API_KEY",
+  "ANTHROPIC_AUTH_TOKEN",
+  "ANTHROPIC_BASE_URL",
+  "CLAUDE_CODE_OAUTH_TOKEN",
+  "CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR",
+  "CLAUDE_CODE_API_KEY_FILE_DESCRIPTOR",
+  "CLAUDE_CODE_USE_BEDROCK",
+  "CLAUDE_CODE_USE_VERTEX",
+  "CLAUDE_CODE_USE_FOUNDRY",
+  "CLAUDE_CODE_USE_ANTHROPIC_AWS",
+  "CLAUDE_CODE_USE_ANTHROPIC_GOOGLE_CLOUD",
+  "CLAUDE_CODE_USE_MANTLE",
+  "CLAUDE_CODE_USE_GATEWAY",
+  "CLAUDE_CODE_OAUTH_REFRESH_TOKEN",
+  "CLAUDE_CODE_OAUTH_SCOPES"
+ ],
+ "remote_control_variables": {
+  "description": "also removed where Remote Control runs: they switch off what Remote Control needs",
+  "names": ["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "DISABLE_GROWTHBOOK"]
+ },
+ "agent_markers": {
+  "description": "a destructive or person-only subcommand refuses when any of these is set and not empty, or when standard input is not a terminal",
+  "names": ["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "BEETHOVEN_REQUEST_ID", "BEETHOVEN_WORKER", "ASHLEY_REQUEST_ID", "ASHLEY_WORKER", "ASHLEY_JOB", "HPCW_AGENT", "AI_AGENT"]
+ },
+ "subscription_signin": {
+  "description": "what `claude auth status` printed -> subscription, other or none; other counts as no sign-in everywhere",
+  "none": "loggedIn is not true",
+  "other": "loggedIn is true and apiKeySource is present (its value is not read), or authMethod is not claude.ai, or apiProvider is present and not firstParty",
+  "subscription": "loggedIn is true, authMethod is claude.ai, apiProvider is firstParty or absent, and apiKeySource is absent",
+  "read_keys": ["loggedIn", "authMethod", "apiProvider", "apiKeySource"]
+ },
+ "signin_cases": [
+  {"input": "{\"loggedIn\": true, \"authMethod\": \"claude.ai\", \"apiProvider\": \"firstParty\", \"email\": \"a@b.edu\", \"subscriptionType\": \"max\"}", "verdict": "subscription"},
+  {"input": "{\"loggedIn\": true, \"authMethod\": \"claude.ai\", \"email\": \"a@b.edu\"}", "verdict": "subscription"},
+  {"input": "{\"loggedIn\": true, \"authMethod\": \"api_key\", \"apiProvider\": \"firstParty\", \"apiKeySource\": \"/login managed key\", \"email\": \"a@b.edu\"}", "verdict": "other"},
+  {"input": "{\"loggedIn\": true, \"authMethod\": \"claude.ai\", \"apiProvider\": \"firstParty\", \"apiKeySource\": \"/login managed key\", \"email\": \"a@b.edu\", \"subscriptionType\": null}", "verdict": "other"},
+  {"input": "{\"loggedIn\": true, \"authMethod\": \"claude.ai\", \"apiProvider\": \"firstParty\", \"apiKeySource\": \"ANTHROPIC_API_KEY\", \"subscriptionType\": \"max\"}", "verdict": "other"},
+  {"input": "{\"loggedIn\": true, \"authMethod\": \"oauth_token\", \"apiProvider\": \"firstParty\"}", "verdict": "other"},
+  {"input": "{\"loggedIn\": true, \"authMethod\": \"third_party\", \"apiProvider\": \"bedrock\"}", "verdict": "other"},
+  {"input": "{\"loggedIn\": true, \"authMethod\": \"claude.ai\", \"apiProvider\": \"gateway\", \"email\": \"a@b.edu\"}", "verdict": "other"},
+  {"input": "{\"loggedIn\": true}", "verdict": "other"},
+  {"input": "{\"loggedIn\": false, \"authMethod\": \"none\", \"apiProvider\": \"firstParty\"}", "verdict": "none"},
+  {"input": "", "verdict": "none"}
+ ]
+}

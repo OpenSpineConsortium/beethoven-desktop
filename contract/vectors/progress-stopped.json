@@ -1,0 +1,13 @@
+{
+ "vector": "progress-stopped",
+ "kind": "file",
+ "summary": "progress.log from the request to the stop",
+ "file": "progress.log",
+ "lines": [
+  "2026-10-01T12:00:00Z Asked the grid for a computer",
+  "2026-10-01T12:00:00Z Got a computer",
+  "2026-10-01T12:00:00Z Connecting to Claude",
+  "2026-10-01T12:00:00Z Online: https://claude.ai/code?environment=env_01XzAN32jsbL8W1PAFSvitBt",
+  "2026-10-01T12:00:00Z Stopped"
+ ]
+}

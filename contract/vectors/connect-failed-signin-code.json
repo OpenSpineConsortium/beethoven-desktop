@@ -1,0 +1,22 @@
+{
+ "vector": "connect-failed-signin-code",
+ "kind": "command",
+ "summary": "Claude Code did not accept the pasted code",
+ "command": "hpcworker connect --profile testsite --login always",
+ "stdin": "<a code Claude Code refuses>",
+ "exit": 7,
+ "stdout": [
+  "HPCW-STEP setup changed",
+  "HPCW-STEP queued 40501234 new /scratch/home/state/worker",
+  "HPCW-STEP signin",
+  "HPCW-LOGIN: requesting a compute node",
+  "HPCW-LOGIN: on node01; checking whether you are signed in already",
+  "HPCW-LOGIN: starting Claude Code's sign-in; waiting for the sign-in link",
+  "AUTH-URL: https://claude.ai/oauth/authorize?code=true",
+  "HPCW-LOGIN: paste the code from that page",
+  "HPCW-LOGIN: code received, checking",
+  "HPCW-LOGIN-FAILED: Claude Code did not accept the code; start the sign-in again and paste the whole code",
+  "HPCW-STEP failed signin-code Claude Code did not accept the code; start the sign-in again and paste the whole code"
+ ],
+ "stderr": []
+}

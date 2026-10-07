@@ -3,7 +3,7 @@
 // code, a key or a token; the student's sign-in happens in their own terminal. Every result passes a
 // redactor before the model sees it. The annotations say truthfully what each tool does.
 import { describeAccounts, readAccounts, registryDir } from './accounts.js';
-import { linkOf, PERMISSION_MODES, type PermissionMode, type StatusJson, type Step } from './contract.js';
+import { linkOf, PERMISSION_MODES, WORKER_NAME_RE, type PermissionMode, type StatusJson, type Step } from './contract.js';
 import type { Grid, Outcome } from './grid.js';
 import type { WorkerRow } from './runs.js';
 import { ArgError, type Tool, type ToolResult } from './mcp.js';
@@ -51,7 +51,7 @@ const NAME_PROP = {
   name: {
     type: 'string',
     description: "The worker's name; leave it out for the one named in Beethoven's settings (usually \"worker\").",
-    pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$',
+    pattern: WORKER_NAME_RE.source,
   },
 };
 
@@ -100,7 +100,8 @@ export function describeStatus(s: StatusJson, asOf: number, nextAt: number, cach
   };
 }
 
-const REPORTING = ['starting', 'need_login', 'need_consent', 'running', 'online'];
+/** the states in which a job rewrites its status.json every 30 s (status.schema.json's words) */
+export const REPORTING = ['starting', 'need_login', 'need_consent', 'running', 'online'];
 const QUIET_MIN = 5;
 
 /** one line per worker, then who each Claude account is running: the view a team spread over jobs and accounts needs */

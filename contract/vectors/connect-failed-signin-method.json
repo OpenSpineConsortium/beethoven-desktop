@@ -1,0 +1,17 @@
+{
+ "vector": "connect-failed-signin-method",
+ "kind": "command",
+ "summary": "Claude Code on the grid is signed in, not with a Claude subscription",
+ "command": "hpcworker connect --profile testsite --login always",
+ "exit": 7,
+ "stdout": [
+  "HPCW-STEP setup changed",
+  "HPCW-STEP queued 40501234 new /scratch/home/state/worker",
+  "HPCW-STEP signin",
+  "HPCW-LOGIN: requesting a compute node",
+  "HPCW-LOGIN: on node01; checking whether you are signed in already",
+  "HPCW-LOGIN-FAILED: Claude Code on the grid is signed in in a way that bills by use or is not a Claude subscription, and Beethoven never runs on that; ask your lead to help you sign in again with your Claude subscription",
+  "HPCW-STEP failed signin-method Claude Code on the grid is signed in in a way that bills by use or is not a Claude subscription, and Beethoven never runs on that; ask your lead to help you sign in again with your Claude subscription"
+ ],
+ "stderr": []
+}

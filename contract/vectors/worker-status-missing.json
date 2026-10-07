@@ -1,0 +1,11 @@
+{
+ "vector": "worker-status-missing",
+ "kind": "command",
+ "summary": "`worker status --json` for a worker that was never started",
+ "command": "hpcworker worker status --name nosuch --json",
+ "exit": 1,
+ "stdout": [],
+ "stderr": [
+  "hpcworker: no worker named nosuch (hpcworker worker start)"
+ ]
+}

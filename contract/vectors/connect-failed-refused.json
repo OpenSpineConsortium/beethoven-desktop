@@ -1,0 +1,13 @@
+{
+ "vector": "connect-failed-refused",
+ "kind": "command",
+ "summary": "The scheduler refused the job",
+ "command": "hpcworker connect --profile testsite --consent <install id>",
+ "exit": 5,
+ "stdout": [
+  "HPCW-STEP setup changed",
+  "HPCW-STEP consent",
+  "HPCW-STEP failed refused sbatch: error: Batch job submission failed: Invalid qos specification"
+ ],
+ "stderr": []
+}

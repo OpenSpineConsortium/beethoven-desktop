@@ -12,6 +12,34 @@
    "version": 1,
    "into": "profiles",
    "origin": "profiles/ORIGIN"
+  },
+  {
+   "repository": "OpenSpineConsortium/hpcworker",
+   "export": "contract",
+   "version": 1,
+   "into": "contract",
+   "origin": "contract/ORIGIN"
+  },
+  {
+   "repository": "OpenSpineConsortium/hpcworker",
+   "export": "contract-text",
+   "version": 1,
+   "into": "contract-text",
+   "origin": "contract-text/ORIGIN"
+  },
+  {
+   "repository": "OpenSpineConsortium/hpcworker",
+   "export": "testbed",
+   "version": 1,
+   "into": "test/hpcworker-testbed",
+   "origin": "test/hpcworker-testbed/ORIGIN"
+  },
+  {
+   "repository": "OpenSpineConsortium/hpcworker",
+   "export": "framework",
+   "version": 1,
+   "into": "test/hpcworker-framework",
+   "origin": "test/hpcworker-framework/ORIGIN"
   }
  ]
 }
