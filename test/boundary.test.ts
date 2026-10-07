@@ -38,10 +38,6 @@ const NOT_FROM_REGISTRY = /^(?:file:|link:|portal:|git[+:]|github:|gitlab:|bitbu
 
 // [file, what matched, why it is still here and who removes it]
 const KNOWN: [string, string, string][] = [
-  ['.github/workflows/ci.yml', 'HPCWORKER_DIR',
-    'a comment saying CI cannot run the real-gate lane because it needs a checkout of hpcworker (HPCWORKER_DIR); the lane now takes '
-    + "hpcworker's pinned `testbed` and `framework` exports, which CI cannot fetch without a token either, so only the comment's "
-    + 'reason is out of date; a session cannot push a workflow file here, so the maintainer rewords it and removes this entry'],
 ];
 
 /** the repository's files: git's list where git is at hand, else the tree without .git, node_modules and dist */
