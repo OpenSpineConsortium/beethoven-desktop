@@ -1,0 +1,17 @@
+{
+ "format": 1,
+ "name": "beethoven-desktop",
+ "repository": "OpenSpineConsortium/beethoven-desktop",
+ "summary": "The desktop edition of Beethoven: a local MCP server, packaged as a Claude Desktop extension and a Claude Code plugin, that reaches a student's Claude Code worker on their university's grid over the student's own ssh sign-in.",
+ "standard": "https://github.com/OpenSpineConsortium/beethoven/blob/main/INTERFACES.md",
+ "exports": [],
+ "imports": [
+  {
+   "repository": "OpenSpineConsortium/hpcworker",
+   "export": "profiles",
+   "version": 1,
+   "into": "profiles",
+   "origin": "profiles/ORIGIN"
+  }
+ ]
+}

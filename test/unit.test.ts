@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { describeAccounts, epochOf, readAccounts, readSmall, registryDir } from '../src/accounts.js';
 import { configFrom } from '../src/config.js';
 import {
-  gateCommand, gateRefusal, gateRemoteLine, isClaudeCodeLink, linkOf, parseGateVersion, parseStatusJson, parseStepLine, progressLines, stoppedLine, type StatusJson,
+  FAIL_CODES, gateCommand, gateRefusal, gateRemoteLine, isClaudeCodeLink, linkOf, parseGateVersion, parseStatusJson, parseStepLine, progressLines, stoppedLine, type StatusJson,
 } from '../src/contract.js';
 import { McpServer, SUPPORTED_VERSIONS, type Tool } from '../src/mcp.js';
 import { loadProfile, profileFrom, ProfileError, stateDirFor } from '../src/profile.js';
@@ -67,7 +67,15 @@ describe('the gate lines', () => {
     expect(parseStepLine('HPCW-STEP setup ready')).toEqual({ kind: 'setup', changed: false });
     expect(parseStepLine('HPCW-STEP queued 40501234 new /rs/x/hpcworker/worker')).toEqual({ kind: 'queued', job: '40501234', kept: false, runDir: '/rs/x/hpcworker/worker' });
     expect(parseStepLine('HPCW-STEP failed weird something')).toEqual({ kind: 'failed', code: 'other', sentence: 'something' });
+    expect(parseStepLine('HPCW-STEP failed signin-x something')).toEqual({ kind: 'failed', code: 'other', sentence: 'something' });
     expect(parseStepLine('HPCW-STEP failed restricted')).toEqual({ kind: 'failed', code: 'restricted', sentence: '' });
+    // step_fail prints "<code> <sentence>" even when the sentence is empty
+    expect(parseStepLine('HPCW-STEP failed restricted ')).toEqual({ kind: 'failed', code: 'restricted', sentence: '' });
+    // every code connect prints on hpcworker's main (framework 17: step_fail's first word, and die's "other"),
+    // written out here rather than taken from FAIL_CODES, so the list is checked and not only repeated
+    const printed = ['usage', 'setup', 'restricted', 'refused', 'signin-node', 'signin-code', 'signin-timeout', 'signin-billed', 'signin-method', 'signin', 'other'];
+    for (const code of printed) expect(parseStepLine(`HPCW-STEP failed ${code} why`)).toEqual({ kind: 'failed', code, sentence: 'why' });
+    expect([...FAIL_CODES].sort()).toEqual([...printed].sort());
     expect(parseStepLine(' HPCW-STEP done')).toBeNull();
     expect(progressLines('bashrc\n2026-10-04T01:00:00Z Asked the grid for a computer\nnope\n')).toEqual(['2026-10-04T01:00:00Z Asked the grid for a computer']);
   });

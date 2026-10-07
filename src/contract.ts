@@ -2,7 +2,9 @@
 // repository's docs/V11_CONTRACT.md (status.json, connection.json, progress.log, HPCW-STEP) and
 // docs/V12_CONTRACT.md (the gate's verbs); the link tests are beethoven-extension's contract.ts,
 // copied, so a link the browser would refuse is refused here too. Change a format there and here
-// together, against the same contract text.
+// together, against the same contract text. These are typed by hand until the server repository's
+// `contract` export is pinned here and the tests read them against it (interface/README.md); on
+// 2026-10-07 each was read against that repository's main (framework 17), and FAIL_CODES lacked two.
 
 /** the gate's own test (gate_name_ok): never a leading "-", so a name can never read as an option */
 export const WORKER_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$/;
@@ -172,9 +174,14 @@ export type Step =
   | { kind: 'signin' }
   | { kind: 'signed-in'; email: string; plan: string }
   | { kind: 'done' }
-  | { kind: 'failed'; code: string; sentence: string };
+  | { kind: 'failed'; code: FailCode; sentence: string };
 
-const FAIL_CODES = ['usage', 'setup', 'restricted', 'refused', 'signin-node', 'signin-code', 'signin-timeout', 'signin'];
+/** every code connect prints after "HPCW-STEP failed" (hpcworker's step_fail and die, framework 17); any other word reads as `other` */
+export const FAIL_CODES = [
+  'usage', 'setup', 'restricted', 'refused', 'signin-node', 'signin-code', 'signin-timeout', 'signin-billed', 'signin-method', 'signin', 'other',
+] as const;
+export type FailCode = (typeof FAIL_CODES)[number];
+const isFailCode = (w: string): w is FailCode => (FAIL_CODES as readonly string[]).includes(w);
 
 export function parseStepLine(raw: string): Step | null {
   const line = raw.replace(/\r$/, '');
@@ -186,7 +193,7 @@ export function parseStepLine(raw: string): Step | null {
   if ((m = /^HPCW-STEP signed-in (\S+) (\S+)$/.exec(line))) return { kind: 'signed-in', email: m[1]!, plan: m[2]! };
   if (line === 'HPCW-STEP done') return { kind: 'done' };
   if ((m = /^HPCW-STEP failed (\S+)(?: (.*))?$/.exec(line))) {
-    return { kind: 'failed', code: FAIL_CODES.includes(m[1]!) ? m[1]! : 'other', sentence: m[2] ?? '' };
+    return { kind: 'failed', code: isFailCode(m[1]!) ? m[1]! : 'other', sentence: m[2] ?? '' };
   }
   return null;
 }
