@@ -8,7 +8,7 @@
 #   bash interface/pull.sh --pinned FOLDER...       exactly the commit FOLDER/ORIGIN already names
 #   bash interface/pull.sh [--ref REF] --all        every import
 #
-# FOLDER is an import's "into" (profiles, contract, contract-text, test/hpcworker-testbed,
+# FOLDER is an import's "into" (profiles, contract, contract-text, registry, test/hpcworker-testbed,
 # test/hpcworker-framework). REF must be a commit the provider's default branch contains (a merged
 # change, never a pull request's branch), and only the files the provider's interface/INTERFACE.json
 # lists under the import's export, at the version the import names, at that commit, are taken, each at

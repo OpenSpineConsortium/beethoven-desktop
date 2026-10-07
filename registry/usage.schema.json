@@ -1,0 +1,37 @@
+{
+ "additionalProperties": false,
+ "description": "usage/<label>.json in bee's registry folder: the last usage window an account's status line saw, written whole by bee's status-line hook (src/beethoven_agents/bee/handoff.py) whenever Claude Code sends either window. Percentages are whole numbers from 0 to 100, null when Claude Code sent none for that window; reset times are epoch seconds, 0 when Claude Code sent none. session_id is what Claude Code named the session. A reader treats a file it cannot read as no reading.",
+ "properties": {
+  "label": {
+   "title": "Label",
+   "type": "string"
+  },
+  "session_id": {
+   "title": "Session Id",
+   "type": ["string", "null"]
+  },
+  "five_hour_pct": {
+   "maximum": 100,
+   "minimum": 0,
+   "title": "Five Hour Pct",
+   "type": ["integer", "null"]
+  },
+  "five_hour_resets_at": {
+   "title": "Five Hour Resets At",
+   "type": "integer"
+  },
+  "seven_day_pct": {
+   "maximum": 100,
+   "minimum": 0,
+   "title": "Seven Day Pct",
+   "type": ["integer", "null"]
+  },
+  "seven_day_resets_at": {
+   "title": "Seven Day Resets At",
+   "type": "integer"
+  }
+ },
+ "required": ["label", "session_id", "five_hour_pct", "five_hour_resets_at", "seven_day_pct", "seven_day_resets_at"],
+ "title": "UsageReading",
+ "type": "object"
+}

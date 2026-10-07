@@ -13,7 +13,8 @@ ecosystem.
 
 ## What it takes
 
-Every import is from `OpenSpineConsortium/hpcworker`, version 1, at the commit its `ORIGIN` names:
+Five imports are from `OpenSpineConsortium/hpcworker` and one from
+`OpenSpineConsortium/beethoven-agents`, each version 1, at the commit its `ORIGIN` names:
 
 | Export | Kind | Into | What reads it |
 | --- | --- | --- | --- |
@@ -22,18 +23,19 @@ Every import is from `OpenSpineConsortium/hpcworker`, version 1, at the commit i
 | `contract-text` | text | `contract-text/` | people changing `src/contract.ts`; `test/contract.test.ts` reads from it the one line `lines.json` does not carry (the stop line, `V11_CONTRACT.md` section 7.1) |
 | `testbed` | program | `test/hpcworker-testbed/` | the opt-in real-gate lane (`test/lab.ts`): the fake scheduler, first on the lab's `PATH` |
 | `framework` | program | `test/hpcworker-framework/` | the same lane: the lab's shared copy, run as a black box behind the testbed |
+| `registry` (beethoven-agents) | schema | `registry/` | `test/registry.test.ts`, which holds the fields, the label pattern and the bounds `src/accounts.ts` types by hand for bee's `accounts.json` and `usage/<label>.json` equal to the two schemas, and the module's accept and refuse to them |
 
 The server ships without any of them but the profiles: what it reads of the cluster side is typed by
 hand in `src/contract.ts`, and the conformance test is what keeps those copies honest.
 
-`profiles/`, `contract/` and `contract-text/` are committed with their `ORIGIN`. The two program
+`profiles/`, `contract/`, `contract-text/` and `registry/` are committed with their `ORIGIN`. The two program
 folders commit their `ORIGIN` alone; git ignores the rest (`.gitignore`), and they are filled only by a
 person who wants the real-gate lane.
 
 ## How a copy is taken
 
 ```
-bash interface/pull.sh FOLDER...              # hpcworker's main, through your own gh sign-in
+bash interface/pull.sh FOLDER...              # the provider's main, through your own gh sign-in
 bash interface/pull.sh --ref REF FOLDER...    # a commit, tag or branch that main contains
 bash interface/pull.sh --all                  # every import, at one commit
 bash interface/pull.sh --pinned FOLDER...     # exactly the commit FOLDER/ORIGIN already names
